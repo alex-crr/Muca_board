@@ -1,0 +1,550 @@
+(kicad_symbol_lib
+  (version 20241209)
+  (generator "kicad-mcp")
+  (generator_version "9.0")
+  (symbol "FT5316DME"
+    (exclude_from_sim no)
+    (in_bom yes)
+    (on_board yes)
+    (property "Reference" "U"
+      (at 2.54 0 0)
+      (effects
+        (font (size 1.27 1.27))
+      )
+    )
+    (property "Value" "FT5316DME"
+      (at 0 -2.54 0)
+      (effects
+        (font (size 1.27 1.27))
+      )
+    )
+    (property "Footprint" "Package_DFN_QFN:QFN-48-1EP_6x6mm_P0.4mm_EP4.6x4.6mm"
+      (at 0 -5.08 0)
+      (effects
+        (font (size 1.27 1.27))
+      )
+      (hide yes)
+    )
+    (property "Datasheet" "https://www.lcd-module.de/fileadmin/eng/pdf/zubehoer/FT5x16_DataSheet_V10.pdf"
+      (at 0 -7.62 0)
+      (effects
+        (font (size 1.27 1.27))
+      )
+      (hide yes)
+    )
+    (property "Description" "FocalTech FT5316DME mutual-capacitance touch controller, 21 TX x 12 RX, I2C/SPI, QFN-48 6x6 P0.4"
+      (at 0 -10.16 0)
+      (effects
+        (font (size 1.27 1.27))
+      )
+      (hide yes)
+    )
+    (property "ki_keywords" "touch capacitive mutual focaltech muca"
+      (at 0 0 0)
+      (effects
+        (font (size 1.27 1.27))
+      )
+      (hide yes)
+    )
+    (symbol "FT5316DME_0_1"
+      (rectangle
+        (start -12.7 38.1)
+        (end 12.7 -33.02)
+        (stroke (width 0.254) (type default))
+        (fill (type background))
+      )
+    )
+    (symbol "FT5316DME_1_1"
+      (pin power_out line
+        (at -7.62 40.64 270)
+        (length 2.54)
+        (name "VDD5"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "23"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin power_out line
+        (at -5.08 40.64 270)
+        (length 2.54)
+        (name "VDDD"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "27"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin power_in line
+        (at 0 40.64 270)
+        (length 2.54)
+        (name "VDDA"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "36"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin power_in line
+        (at 2.54 40.64 270)
+        (length 2.54)
+        (name "VDD3"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "24"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin power_in line
+        (at 7.62 40.64 270)
+        (length 2.54)
+        (name "IOVCC"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "35"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin power_in line
+        (at -5.08 -35.56 90)
+        (length 2.54)
+        (name "VSSA"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "1"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin power_in line
+        (at -2.54 -35.56 90)
+        (length 2.54)
+        (name "VSS"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "25"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin power_in line
+        (at 0 -35.56 90)
+        (length 2.54)
+        (name "VSSD"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "26"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin power_in line
+        (at 2.54 -35.56 90)
+        (length 2.54)
+        (name "EP"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "49"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin output line
+        (at -15.24 27.94 0)
+        (length 2.54)
+        (name "TX1"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "2"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin output line
+        (at -15.24 25.4 0)
+        (length 2.54)
+        (name "TX2"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "3"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin output line
+        (at -15.24 22.86 0)
+        (length 2.54)
+        (name "TX3"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "4"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin output line
+        (at -15.24 20.32 0)
+        (length 2.54)
+        (name "TX4"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "5"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin output line
+        (at -15.24 17.78 0)
+        (length 2.54)
+        (name "TX5"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "6"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin output line
+        (at -15.24 15.24 0)
+        (length 2.54)
+        (name "TX6"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "7"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin output line
+        (at -15.24 12.7 0)
+        (length 2.54)
+        (name "TX7"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "8"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin output line
+        (at -15.24 10.16 0)
+        (length 2.54)
+        (name "TX8"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "9"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin output line
+        (at -15.24 7.62 0)
+        (length 2.54)
+        (name "TX9"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "10"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin output line
+        (at -15.24 5.08 0)
+        (length 2.54)
+        (name "TX10"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "11"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin output line
+        (at -15.24 2.54 0)
+        (length 2.54)
+        (name "TX11"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "12"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin output line
+        (at -15.24 0 0)
+        (length 2.54)
+        (name "TX12"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "13"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin output line
+        (at -15.24 -2.54 0)
+        (length 2.54)
+        (name "TX13"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "14"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin output line
+        (at -15.24 -5.08 0)
+        (length 2.54)
+        (name "TX14"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "15"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin output line
+        (at -15.24 -7.62 0)
+        (length 2.54)
+        (name "TX15"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "16"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin output line
+        (at -15.24 -10.16 0)
+        (length 2.54)
+        (name "TX16"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "17"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin output line
+        (at -15.24 -12.7 0)
+        (length 2.54)
+        (name "TX17"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "18"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin output line
+        (at -15.24 -15.24 0)
+        (length 2.54)
+        (name "TX18"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "19"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin output line
+        (at -15.24 -17.78 0)
+        (length 2.54)
+        (name "TX19"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "20"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin output line
+        (at -15.24 -20.32 0)
+        (length 2.54)
+        (name "TX20"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "21"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin output line
+        (at -15.24 -22.86 0)
+        (length 2.54)
+        (name "TX21"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "22"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin input line
+        (at 15.24 27.94 180)
+        (length 2.54)
+        (name "RX1"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "37"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin input line
+        (at 15.24 25.4 180)
+        (length 2.54)
+        (name "RX2"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "38"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin input line
+        (at 15.24 22.86 180)
+        (length 2.54)
+        (name "RX3"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "39"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin input line
+        (at 15.24 20.32 180)
+        (length 2.54)
+        (name "RX4"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "40"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin input line
+        (at 15.24 17.78 180)
+        (length 2.54)
+        (name "RX5"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "41"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin input line
+        (at 15.24 15.24 180)
+        (length 2.54)
+        (name "RX6"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "42"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin input line
+        (at 15.24 12.7 180)
+        (length 2.54)
+        (name "RX7"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "43"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin input line
+        (at 15.24 10.16 180)
+        (length 2.54)
+        (name "RX8"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "44"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin input line
+        (at 15.24 7.62 180)
+        (length 2.54)
+        (name "RX9"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "45"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin input line
+        (at 15.24 5.08 180)
+        (length 2.54)
+        (name "RX10"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "46"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin input line
+        (at 15.24 2.54 180)
+        (length 2.54)
+        (name "RX11"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "47"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin input line
+        (at 15.24 0 180)
+        (length 2.54)
+        (name "RX12"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "48"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin bidirectional line
+        (at 15.24 -10.16 180)
+        (length 2.54)
+        (name "SDA/SCK"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "33"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin input line
+        (at 15.24 -12.7 180)
+        (length 2.54)
+        (name "SCL/SSEL"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "34"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin bidirectional line
+        (at 15.24 -15.24 180)
+        (length 2.54)
+        (name "GPIO6/WAKE"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "30"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin input line
+        (at 15.24 -17.78 180)
+        (length 2.54)
+        (name "~{RST}"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "28"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin bidirectional line
+        (at 15.24 -20.32 180)
+        (length 2.54)
+        (name "GPIO7"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "29"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin bidirectional line
+        (at 15.24 -22.86 180)
+        (length 2.54)
+        (name "MISO"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "31"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+      (pin bidirectional line
+        (at 15.24 -25.4 180)
+        (length 2.54)
+        (name "MOSI"
+          (effects (font (size 1.27 1.27)))
+        )
+        (number "32"
+          (effects (font (size 1.27 1.27)))
+        )
+      )
+    )
+  )
+)

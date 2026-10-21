@@ -1,0 +1,15 @@
+# KiCad local / generated files
+*.kicad_prl
+*.lck
+~*
+*-backups/
+.history/
+_autosave-*
+fp-info-cache
+*.bak
+*.kicad_sch-bak
+.mcp-backups/
+_to_delete/
+# Fabrication outputs (commit them explicitly per release if needed)
+gerbers/
+production/

@@ -1,0 +1,77 @@
+(kicad_sch (version 20260101) (generator "eeschema") (generator_version "10.0")
+
+  (uuid e64ae37a-5f2e-4205-a2c7-2e0d16600fe2)
+
+  (paper "A4")
+
+  (lib_symbols
+  )
+
+  (sheet (at 30.48 50.8) (size 50.8 30.48) (fields_autoplaced yes)
+    (stroke (width 0.0006) (type default))
+    (fill (color 0 0 0 0.0000))
+    (uuid "eb0a1813-e319-455e-9a2c-4a3cec00180c")
+    (property "Sheetname" "Power" (at 33.02 49.53 0)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "power.kicad_sch" (at 33.02 82.55 0)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "MUCA2"
+        (path "/e64ae37a-5f2e-4205-a2c7-2e0d16600fe2" (page "2"))
+      )
+    )
+  )
+  (sheet (at 96.52 50.8) (size 50.8 30.48) (fields_autoplaced yes)
+    (stroke (width 0.0006) (type default))
+    (fill (color 0 0 0 0.0000))
+    (uuid "ed8fb250-783c-459b-b723-716a4b8db1cf")
+    (property "Sheetname" "MCU" (at 99.06 49.53 0)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "mcu.kicad_sch" (at 99.06 82.55 0)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "MUCA2"
+        (path "/e64ae37a-5f2e-4205-a2c7-2e0d16600fe2" (page "3"))
+      )
+    )
+  )
+  (sheet (at 162.56 50.8) (size 50.8 30.48) (fields_autoplaced yes)
+    (stroke (width 0.0006) (type default))
+    (fill (color 0 0 0 0.0000))
+    (uuid "6b13c91f-163f-4175-ba3f-e1dc2744293b")
+    (property "Sheetname" "Touch AFE" (at 165.1 49.53 0)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "touch.kicad_sch" (at 165.1 82.55 0)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "MUCA2"
+        (path "/e64ae37a-5f2e-4205-a2c7-2e0d16600fe2" (page "4"))
+      )
+    )
+  )
+  (sheet (at 228.6 50.8) (size 50.8 30.48) (fields_autoplaced yes)
+    (stroke (width 0.0006) (type default))
+    (fill (color 0 0 0 0.0000))
+    (uuid "67d41da0-9ed1-46ee-b69f-7db3afdd5fc5")
+    (property "Sheetname" "CAN" (at 231.14 49.53 0)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "can.kicad_sch" (at 231.14 82.55 0)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "MUCA2"
+        (path "/e64ae37a-5f2e-4205-a2c7-2e0d16600fe2" (page "5"))
+      )
+    )
+  )
+  (sheet_instances
+    (path "/" (page "1"))
+  )
+)
