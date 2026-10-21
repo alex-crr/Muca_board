@@ -13,3 +13,4 @@ _to_delete/
 # Fabrication outputs (commit them explicitly per release if needed)
 gerbers/
 production/
+*_drc_violations.json
