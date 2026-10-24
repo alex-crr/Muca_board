@@ -12,12 +12,12 @@ Status: rev 0.1, schematic complete (ERC clean), board routed (DRC 0 errors, sil
 | Host | Seeed Studio XIAO ESP32S3 (SMD castellated) | USB-C, 3.3 V regulator, RESET/BOOT buttons on the module. TWAI (CAN 2.0B). |
 | CAN | SN65HVD230, NUP2105L TVS | 2x JST-GH 4-pin, DroneCAN pinout (1 +5 V, 2 CANH, 3 CANL, 4 GND). Solder-jumper 120 ohm termination. |
 | Power | LM66100 ideal diode CAN 5 V -> XIAO 5V pin | USB powers the board through the XIAO; CAN 5 V back-feeds through the diode. XIAO 3V3 powers the whole board; ferrite-filtered +3.3VA for the FT5316 analog supplies. Max input 5.5 V. |
-| Sensor I/O | 2x Molex 200528 FPC, 1.0 mm pitch | J3: 23-pin TX, J4: 14-pin RX, GND guard on both edges. |
-| Debug | 6 LEDs, 7 test points | LEDs: CAN pwr, 3V3, HB, SENSE, COMM, FAULT. Test points on +5V, +3V3, GND and the I2C/INT/RST bus. |
+| Sensor I/O | 2x 2.54 mm right-angle female socket, 1x10 | J3: TX1-TX10, J4: RX1-RX10 (10 x 10), pin 1 at the right end. Sensor tails carry Amphenol Clincher 66226 pin connectors (e.g. 66226-037LF, 5 pos) on pins 1-5. |
+| Debug | 7 LEDs, 7 test points | LEDs, labelled on silkscreen: CAN PWR, 3V3, TOUCH PWR (FT5316 analog rail), and the status row FAULT / COMM / SENSE / HEARTBEAT (left to right). Test points on +5V, +3V3, GND and the I2C/INT/RST bus. |
 
 ## Layout
 
-70 x 50 mm, 2 layers. Sensing side (FPCs + FT5316) on the top edge, digital side (XIAO, CAN, power) on the bottom. TX/RX fans are hand-routed on F.Cu, non-crossing, over a solid B.Cu GND plane (no-tracks keepout under the sensing zone). Only the 4-wire I2C/INT/RST bus crosses between the two halves.
+70 x 50 mm, 2 layers. Sensing side (sensor sockets + FT5316) on the top edge, digital side (XIAO, CAN, power) on the bottom. TX/RX fans are hand-routed on F.Cu, non-crossing, over a solid B.Cu GND plane (no-tracks keepout under the sensing zone). Only the 4-wire I2C/INT/RST bus crosses between the two halves. The remaining nets were routed with a grid router: signals 0.2 mm, +3V3/+3.3VA/CAN_VBUS 0.3 mm, +5V 0.4 mm. The I2C bus needs 6 vias because J7's pin order is the reverse of U6's. Every GND pad reaches the B.Cu pour through a via.
 
 ## XIAO pin map
 
@@ -43,7 +43,8 @@ I2C is not on the XIAO default pins: use `Wire.begin(4, 3)` (SDA, SCL). D6/D7 ar
 
 - FT5316DME ships blank: flash `MuCaFirmware.bin` over I2C from the ESP32 ([muca-firmware](https://github.com/muca-board/muca-firmware)).
 - FT5316DME sourcing not confirmed.
-- Verify FPC and JST-GH opening direction in the 3D viewer.
+- Verify socket and JST-GH opening direction in the 3D viewer.
+- H2 sits at (166.5, 123), 11 mm below H1, to leave room for the RX1 trace to J4 pin 1: the mounting pattern is not a rectangle.
 - Silkscreen cleanup (overlapping references), no mounting holes yet.
 - CAN bus power limited to 5 V nominal; a 12-24 V bus needs a buck converter.
 
