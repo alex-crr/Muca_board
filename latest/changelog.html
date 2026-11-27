@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Changelog — MUCA2</title>
+<script>
+  (function() {
+    const saved = localStorage.getItem("espin-theme");
+    const theme = saved || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+<style>
+  :root, [data-theme="dark"] {
+    --bg: #09090b;
+    --bg-translucent: rgba(9, 9, 11, 0.82);
+    --surface: #111113;
+    --surface-2: #18181b;
+    --hover: rgba(255, 255, 255, 0.04);
+    --border: #27272a;
+    --border-strong: #3f3f46;
+    --text: #fafafa;
+    --text-secondary: #d4d4d8;
+    --muted: #a1a1aa;
+    --accent: #10b981;
+    --accent-soft: color-mix(in srgb, #10b981 13%, transparent);
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  [data-theme="light"] {
+    --bg: #ffffff;
+    --bg-translucent: rgba(255, 255, 255, 0.86);
+    --surface: #fafafa;
+    --surface-2: #f4f4f5;
+    --hover: rgba(0, 0, 0, 0.035);
+    --border: #e4e4e7;
+    --border-strong: #d4d4d8;
+    --text: #09090b;
+    --text-secondary: #27272a;
+    --muted: #71717a;
+    --accent: color-mix(in srgb, #10b981 88%, #000000);
+    --accent-soft: color-mix(in srgb, #10b981 12%, transparent);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.65; -webkit-font-smoothing: antialiased; }
+
+  .topbar {
+    position: sticky; top: 0; z-index: 40; height: 56px;
+    background: var(--bg-translucent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px; gap: 12px;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .menu-btn {
+    display: none; background: transparent; border: 1px solid var(--border); color: var(--text);
+    width: 34px; height: 34px; border-radius: 8px; cursor: pointer; align-items: center; justify-content: center;
+  }
+  .brand-link {
+    display: inline-flex; align-items: center; gap: 9px;
+    font-weight: 650; font-size: 0.98rem; letter-spacing: -0.015em;
+    color: var(--text); text-decoration: none; white-space: nowrap;
+  }
+  .brand-dot {
+    width: 9px; height: 9px; border-radius: 50%; background: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .ver-select-wrap { position: relative; display: inline-flex; align-items: center; }
+  .ver-select {
+    appearance: none; -webkit-appearance: none;
+    font-family: var(--mono); font-size: 0.74rem; font-weight: 500;
+    padding: 4px 24px 4px 10px; border-radius: 999px;
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--text-secondary);
+    cursor: pointer; max-width: 210px;
+  }
+  .ver-select:hover { border-color: var(--border-strong); color: var(--text); }
+  .ver-select:focus { outline: none; border-color: var(--accent); }
+  .ver-caret {
+    position: absolute; right: 8px; pointer-events: none; color: var(--muted);
+    display: inline-flex; align-items: center;
+  }
+
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .top-link {
+    font-size: 0.84rem; font-weight: 500; color: var(--muted); text-decoration: none;
+    padding: 5px 10px; border-radius: 7px; transition: color 0.15s, background 0.15s; white-space: nowrap;
+  }
+  .top-link:hover { color: var(--text); background: var(--hover); }
+  .theme-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; border-radius: 8px;
+    background: transparent; border: 1px solid var(--border); color: var(--muted);
+    cursor: pointer; transition: color 0.15s, border-color 0.15s;
+  }
+  .theme-btn:hover { color: var(--text); border-color: var(--border-strong); }
+
+  .shell { display: flex; min-height: calc(100vh - 56px); }
+  aside.sidebar {
+    width: 256px; flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    background: var(--bg);
+    padding: 20px 14px;
+    position: sticky; top: 56px; height: calc(100vh - 56px); overflow-y: auto;
+  }
+  .nav-group-title {
+    font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--muted); padding: 0 10px; margin: 18px 0 6px;
+  }
+  .nav-group-title:first-child { margin-top: 0; }
+  aside.sidebar a {
+    display: flex; align-items: center; padding: 7px 10px; border-radius: 8px;
+    color: var(--muted); text-decoration: none; font-size: 0.875rem; font-weight: 500;
+    margin-bottom: 2px; transition: background 0.12s, color 0.12s;
+  }
+  aside.sidebar a:hover { background: var(--hover); color: var(--text); }
+  aside.sidebar a.active {
+    background: var(--accent-soft); color: var(--accent); font-weight: 600;
+  }
+
+  main { flex: 1; min-width: 0; }
+  main.layout-prose { padding: 36px 48px 64px; max-width: 920px; }
+  main.layout-wide { padding: 28px 36px 48px; max-width: 1320px; }
+  main.layout-fullbleed { padding: 0; display: flex; flex-direction: column; height: calc(100vh - 56px); }
+
+  h1 { font-size: 1.85rem; font-weight: 650; letter-spacing: -0.025em; margin: 0 0 16px; line-height: 1.25; }
+  h2 { font-size: 1.3rem; font-weight: 600; letter-spacing: -0.015em; margin: 32px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.05rem; font-weight: 600; margin: 22px 0 8px; }
+  p { color: var(--text-secondary); margin: 0 0 14px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  img { max-width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--border); }
+  pre {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 14px 16px; border-radius: 10px; overflow-x: auto; font-size: 0.85rem;
+  }
+  code {
+    font-family: var(--mono); background: var(--surface-2);
+    padding: 2px 6px; border-radius: 5px; font-size: 0.84em;
+  }
+  pre code { background: none; padding: 0; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.88rem; }
+  th, td { border-bottom: 1px solid var(--border); padding: 10px 12px; text-align: left; }
+  th { color: var(--muted); font-size: 0.76rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; background: var(--surface); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin: 16px 0; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px;
+  }
+  .card img { background: #101216; display: block; margin: 0 auto; border-radius: 8px; border: none; }
+  .card .cap { color: var(--muted); font-size: 0.82rem; margin-top: 10px; text-align: center; font-weight: 500; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent); color: #ffffff !important; text-decoration: none !important;
+    padding: 8px 14px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; margin: 4px 6px 4px 0;
+    transition: filter 0.15s;
+  }
+  .btn:hover { filter: brightness(1.06); }
+  .btn.sec {
+    background: var(--surface); border: 1px solid var(--border); color: var(--text) !important; font-weight: 500;
+  }
+  .btn.sec:hover { border-color: var(--border-strong); background: var(--surface-2); }
+
+  .alert-banner {
+    background: rgba(239, 68, 68, 0.09);
+    border: 1px solid rgba(239, 68, 68, 0.42);
+    border-left: 4px solid #ef4444;
+    border-radius: 10px;
+    padding: 13px 16px;
+    margin-bottom: 22px;
+    font-size: 0.88rem;
+  }
+  .alert-banner strong { color: #ef4444; }
+  .alert-banner a { color: #ef4444; text-decoration: underline; font-weight: 600; }
+
+  .svg-box {
+    background: #ffffff; border-radius: 10px; padding: 12px; margin-bottom: 20px; border: 1px solid var(--border);
+  }
+  .svg-box img { border: none; }
+
+  .ibom-bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 20px; border-bottom: 1px solid var(--border); background: var(--surface);
+    font-size: 0.86rem; flex-shrink: 0;
+  }
+  .ibom-frame { flex: 1; width: 100%; border: none; display: block; background: #111; }
+
+  @media (max-width: 900px) {
+    .menu-btn { display: inline-flex; }
+    aside.sidebar {
+      position: fixed; left: -270px; top: 56px; z-index: 50; width: 260px;
+      height: calc(100vh - 56px); transition: left 0.2s ease; box-shadow: 4px 0 24px rgba(0,0,0,0.35);
+    }
+    aside.sidebar.open { left: 0; }
+    main.layout-prose, main.layout-wide { padding: 20px 18px 40px; }
+  }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <button type="button" class="menu-btn" id="menuToggle" aria-label="Toggle navigation">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <a class="brand-link" href="index.html">
+        <span class="brand-dot"></span>
+        <span>MUCA2</span>
+      </a>
+      <div class="ver-select-wrap">
+        <select id="versionSwitcher" class="ver-select" aria-label="Select version or branch" data-current="latest" data-root-rel=".." data-page="changelog.html">
+          <option value="main">main · 42600b9</option>
+        </select>
+        <span class="ver-caret">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 12 15 18 9"/></svg>
+        </span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      
+      <button type="button" class="theme-btn" id="themeToggle" aria-label="Toggle light/dark theme" title="Switch theme">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="nav-group-title">Documentation</div>
+      <a href="index.html">Overview</a>
+<a href="changelog.html" class="active">Changelog</a>
+      <div class="nav-group-title">Hardware</div>
+      <a href="renders.html">PCB Renders &amp; 3D</a>
+<a href="schematic.html">Schematic</a>
+<a href="bom.html">Priced BOM &amp; Stock</a>
+<a href="ibom.html">Interactive BOM (iBOM)</a>
+<a href="checks.html">ERC &amp; DRC Reports</a>
+<a href="downloads.html">Downloads</a>
+    </aside>
+    <main class="layout-prose">
+      <h1 id="changelog">Changelog</h1>
+<!--
+Add a heading matching your git tag (for example `## [v1.0.0] - 2026-11-20`)
+and the release pipeline will copy that section into the GitHub Release notes.
+-->
+
+<h2 id="unreleased">[Unreleased]</h2>
+<ul>
+<li>Initial KiCad 10 CI/CD pipeline setup.</li>
+</ul>
+    </main>
+  </div>
+
+<script>
+  document.getElementById("themeToggle").addEventListener("click", () => {
+    const cur = document.documentElement.getAttribute("data-theme") || "dark";
+    const nxt = cur === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", nxt);
+    localStorage.setItem("espin-theme", nxt);
+  });
+  document.getElementById("menuToggle").addEventListener("click", () => {
+    document.getElementById("sidebar").classList.toggle("open");
+  });
+
+  // Dynamic multi-version / branch switcher populated from root versions.json
+  (async function() {
+    const sel = document.getElementById("versionSwitcher");
+    if (!sel) return;
+    const rootRel = sel.dataset.rootRel || "..";
+    const currentId = sel.dataset.current || "";
+    const pageName = sel.dataset.page || "index.html";
+    try {
+      const resp = await fetch(rootRel + "/versions.json", { cache: "no-cache" });
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const versions = data.versions || [];
+      if (!versions.length) return;
+
+      const releases = versions.filter(v => v.type === "latest" || v.type === "tag");
+      const branches = versions.filter(v => v.type === "branch");
+      const others = versions.filter(v => !["latest", "tag", "branch"].includes(v.type));
+
+      sel.innerHTML = "";
+      function addGroup(label, items) {
+        if (!items.length) return;
+        const og = document.createElement("optgroup");
+        og.label = label;
+        for (const v of items) {
+          const opt = document.createElement("option");
+          opt.value = v.id;
+          const sha = v.sha ? ` · ${v.sha.slice(0, 7)}` : "";
+          opt.textContent = `${v.label}${sha}`;
+          if (v.id === currentId) opt.selected = true;
+          og.appendChild(opt);
+        }
+        sel.appendChild(og);
+      }
+      addGroup("Releases", releases);
+      addGroup("Branches", branches);
+      addGroup("Other", others);
+
+      sel.addEventListener("change", () => {
+        const target = sel.value;
+        if (target && target !== currentId) {
+          window.location.href = `${rootRel}/${target}/${pageName}`;
+        }
+      });
+    } catch (_e) {
+      // Standalone/local preview without root versions.json
+    }
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Priced BOM &amp; Stock — MUCA2</title>
+<script>
+  (function() {
+    const saved = localStorage.getItem("espin-theme");
+    const theme = saved || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+<style>
+  :root, [data-theme="dark"] {
+    --bg: #09090b;
+    --bg-translucent: rgba(9, 9, 11, 0.82);
+    --surface: #111113;
+    --surface-2: #18181b;
+    --hover: rgba(255, 255, 255, 0.04);
+    --border: #27272a;
+    --border-strong: #3f3f46;
+    --text: #fafafa;
+    --text-secondary: #d4d4d8;
+    --muted: #a1a1aa;
+    --accent: #10b981;
+    --accent-soft: color-mix(in srgb, #10b981 13%, transparent);
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  [data-theme="light"] {
+    --bg: #ffffff;
+    --bg-translucent: rgba(255, 255, 255, 0.86);
+    --surface: #fafafa;
+    --surface-2: #f4f4f5;
+    --hover: rgba(0, 0, 0, 0.035);
+    --border: #e4e4e7;
+    --border-strong: #d4d4d8;
+    --text: #09090b;
+    --text-secondary: #27272a;
+    --muted: #71717a;
+    --accent: color-mix(in srgb, #10b981 88%, #000000);
+    --accent-soft: color-mix(in srgb, #10b981 12%, transparent);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.65; -webkit-font-smoothing: antialiased; }
+
+  .topbar {
+    position: sticky; top: 0; z-index: 40; height: 56px;
+    background: var(--bg-translucent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px; gap: 12px;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .menu-btn {
+    display: none; background: transparent; border: 1px solid var(--border); color: var(--text);
+    width: 34px; height: 34px; border-radius: 8px; cursor: pointer; align-items: center; justify-content: center;
+  }
+  .brand-link {
+    display: inline-flex; align-items: center; gap: 9px;
+    font-weight: 650; font-size: 0.98rem; letter-spacing: -0.015em;
+    color: var(--text); text-decoration: none; white-space: nowrap;
+  }
+  .brand-dot {
+    width: 9px; height: 9px; border-radius: 50%; background: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .ver-select-wrap { position: relative; display: inline-flex; align-items: center; }
+  .ver-select {
+    appearance: none; -webkit-appearance: none;
+    font-family: var(--mono); font-size: 0.74rem; font-weight: 500;
+    padding: 4px 24px 4px 10px; border-radius: 999px;
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--text-secondary);
+    cursor: pointer; max-width: 210px;
+  }
+  .ver-select:hover { border-color: var(--border-strong); color: var(--text); }
+  .ver-select:focus { outline: none; border-color: var(--accent); }
+  .ver-caret {
+    position: absolute; right: 8px; pointer-events: none; color: var(--muted);
+    display: inline-flex; align-items: center;
+  }
+
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+  .top-link {
+    font-size: 0.84rem; font-weight: 500; color: var(--muted); text-decoration: none;
+    padding: 5px 10px; border-radius: 7px; transition: color 0.15s, background 0.15s; white-space: nowrap;
+  }
+  .top-link:hover { color: var(--text); background: var(--hover); }
+  .theme-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; border-radius: 8px;
+    background: transparent; border: 1px solid var(--border); color: var(--muted);
+    cursor: pointer; transition: color 0.15s, border-color 0.15s;
+  }
+  .theme-btn:hover { color: var(--text); border-color: var(--border-strong); }
+
+  .shell { display: flex; min-height: calc(100vh - 56px); }
+  aside.sidebar {
+    width: 256px; flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    background: var(--bg);
+    padding: 20px 14px;
+    position: sticky; top: 56px; height: calc(100vh - 56px); overflow-y: auto;
+  }
+  .nav-group-title {
+    font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--muted); padding: 0 10px; margin: 18px 0 6px;
+  }
+  .nav-group-title:first-child { margin-top: 0; }
+  aside.sidebar a {
+    display: flex; align-items: center; padding: 7px 10px; border-radius: 8px;
+    color: var(--muted); text-decoration: none; font-size: 0.875rem; font-weight: 500;
+    margin-bottom: 2px; transition: background 0.12s, color 0.12s;
+  }
+  aside.sidebar a:hover { background: var(--hover); color: var(--text); }
+  aside.sidebar a.active {
+    background: var(--accent-soft); color: var(--accent); font-weight: 600;
+  }
+
+  main { flex: 1; min-width: 0; }
+  main.layout-prose { padding: 36px 48px 64px; max-width: 920px; }
+  main.layout-wide { padding: 28px 36px 48px; max-width: 1320px; }
+  main.layout-fullbleed { padding: 0; display: flex; flex-direction: column; height: calc(100vh - 56px); }
+
+  h1 { font-size: 1.85rem; font-weight: 650; letter-spacing: -0.025em; margin: 0 0 16px; line-height: 1.25; }
+  h2 { font-size: 1.3rem; font-weight: 600; letter-spacing: -0.015em; margin: 32px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.05rem; font-weight: 600; margin: 22px 0 8px; }
+  p { color: var(--text-secondary); margin: 0 0 14px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  img { max-width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--border); }
+  pre {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 14px 16px; border-radius: 10px; overflow-x: auto; font-size: 0.85rem;
+  }
+  code {
+    font-family: var(--mono); background: var(--surface-2);
+    padding: 2px 6px; border-radius: 5px; font-size: 0.84em;
+  }
+  pre code { background: none; padding: 0; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.88rem; }
+  th, td { border-bottom: 1px solid var(--border); padding: 10px 12px; text-align: left; }
+  th { color: var(--muted); font-size: 0.76rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; background: var(--surface); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin: 16px 0; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px;
+  }
+  .card img { background: #101216; display: block; margin: 0 auto; border-radius: 8px; border: none; }
+  .card .cap { color: var(--muted); font-size: 0.82rem; margin-top: 10px; text-align: center; font-weight: 500; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent); color: #ffffff !important; text-decoration: none !important;
+    padding: 8px 14px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; margin: 4px 6px 4px 0;
+    transition: filter 0.15s;
+  }
+  .btn:hover { filter: brightness(1.06); }
+  .btn.sec {
+    background: var(--surface); border: 1px solid var(--border); color: var(--text) !important; font-weight: 500;
+  }
+  .btn.sec:hover { border-color: var(--border-strong); background: var(--surface-2); }
+
+  .alert-banner {
+    background: rgba(239, 68, 68, 0.09);
+    border: 1px solid rgba(239, 68, 68, 0.42);
+    border-left: 4px solid #ef4444;
+    border-radius: 10px;
+    padding: 13px 16px;
+    margin-bottom: 22px;
+    font-size: 0.88rem;
+  }
+  .alert-banner strong { color: #ef4444; }
+  .alert-banner a { color: #ef4444; text-decoration: underline; font-weight: 600; }
+
+  .svg-box {
+    background: #ffffff; border-radius: 10px; padding: 12px; margin-bottom: 20px; border: 1px solid var(--border);
+  }
+  .svg-box img { border: none; }
+
+  .ibom-bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 20px; border-bottom: 1px solid var(--border); background: var(--surface);
+    font-size: 0.86rem; flex-shrink: 0;
+  }
+  .ibom-frame { flex: 1; width: 100%; border: none; display: block; background: #111; }
+
+  @media (max-width: 900px) {
+    .menu-btn { display: inline-flex; }
+    aside.sidebar {
+      position: fixed; left: -270px; top: 56px; z-index: 50; width: 260px;
+      height: calc(100vh - 56px); transition: left 0.2s ease; box-shadow: 4px 0 24px rgba(0,0,0,0.35);
+    }
+    aside.sidebar.open { left: 0; }
+    main.layout-prose, main.layout-wide { padding: 20px 18px 40px; }
+  }
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <button type="button" class="menu-btn" id="menuToggle" aria-label="Toggle navigation">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <a class="brand-link" href="index.html">
+        <span class="brand-dot"></span>
+        <span>MUCA2</span>
+      </a>
+      <div class="ver-select-wrap">
+        <select id="versionSwitcher" class="ver-select" aria-label="Select version or branch" data-current="main" data-root-rel=".." data-page="bom.html">
+          <option value="main">main · 42600b9</option>
+        </select>
+        <span class="ver-caret">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="6 9 12 15 18 9"/></svg>
+        </span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      
+      <button type="button" class="theme-btn" id="themeToggle" aria-label="Toggle light/dark theme" title="Switch theme">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="nav-group-title">Documentation</div>
+      <a href="index.html">Overview</a>
+<a href="changelog.html">Changelog</a>
+      <div class="nav-group-title">Hardware</div>
+      <a href="renders.html">PCB Renders &amp; 3D</a>
+<a href="schematic.html">Schematic</a>
+<a href="bom.html" class="active">Priced BOM &amp; Stock</a>
+<a href="ibom.html">Interactive BOM (iBOM)</a>
+<a href="checks.html">ERC &amp; DRC Reports</a>
+<a href="downloads.html">Downloads</a>
+    </aside>
+    <main class="layout-wide">
+      
+<style>
+  .bom-header {
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end;
+    gap: 12px; margin-bottom: 20px;
+  }
+  .bom-header h1 {
+    margin: 0; font-size: 1.75rem; font-weight: 650; letter-spacing: -0.025em; border: none; padding: 0;
+  }
+  .bom-sub { color: var(--muted); font-size: 0.875rem; margin-top: 4px; }
+
+  .bom-controls {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .bom-ctrl-top {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 16px; justify-content: space-between;
+  }
+  .bom-field { display: flex; flex-direction: column; gap: 6px; }
+  .bom-field-label {
+    font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted);
+  }
+  .bom-slider-group {
+    flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .bom-slider-row { display: flex; align-items: center; gap: 12px; }
+  .bom-slider-row input[type="range"] {
+    flex: 1; accent-color: var(--accent); height: 5px; cursor: pointer;
+  }
+  .bom-qty-input {
+    width: 82px; padding: 6px 10px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text);
+    font-size: 0.92rem; font-weight: 600; text-align: center; font-variant-numeric: tabular-nums;
+  }
+  .bom-select {
+    padding: 7px 32px 7px 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text);
+    font-size: 0.88rem; font-weight: 500; cursor: pointer; min-width: 190px;
+  }
+  .bom-select:focus, .bom-qty-input:focus, .bom-search:focus {
+    outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .bom-ctrl-bottom {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    padding-top: 12px; border-top: 1px solid var(--border);
+  }
+  .bom-preset {
+    background: var(--bg); color: var(--muted); border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 0.8rem; font-weight: 500;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+  }
+  .bom-preset:hover { color: var(--text); border-color: var(--border-strong); }
+  .bom-preset.active {
+    border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 600;
+  }
+  .bom-fee-toggle {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 8px;
+    font-size: 0.83rem; color: var(--muted); cursor: pointer; user-select: none;
+  }
+  .bom-fee-toggle.disabled { opacity: 0.45; pointer-events: none; }
+
+  .bom-kpis {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
+    gap: 12px; margin-bottom: 16px;
+  }
+  .bom-kpi {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .bom-kpi-label {
+    font-size: 0.74rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted);
+  }
+  .bom-kpi-val {
+    font-size: 1.45rem; font-weight: 650; margin-top: 4px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
+  }
+  .bom-kpi-sub { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+
+  .bom-toolbar {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px;
+  }
+  .bom-search {
+    flex: 1; min-width: 220px; padding: 8px 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 0.88rem;
+  }
+  .bom-pill {
+    background: var(--surface); color: var(--muted); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 11px; font-size: 0.82rem; font-weight: 500; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .bom-pill:hover { color: var(--text); border-color: var(--border-strong); }
+  .bom-pill.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+  .bom-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--surface); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 12px; font-size: 0.82rem; font-weight: 500; cursor: pointer;
+    text-decoration: none; transition: border-color 0.15s, background 0.15s;
+  }
+  .bom-btn:hover { border-color: var(--border-strong); background: var(--surface-2); text-decoration: none; }
+  .bom-btn.primary {
+    background: var(--accent); border-color: var(--accent); color: #ffffff; font-weight: 600;
+  }
+  .bom-btn.primary:hover { filter: brightness(1.06); }
+
+  .bom-table-card {
+    border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow: hidden;
+  }
+  .bom-table-scroll { overflow-x: auto; }
+  table.bom-table { width: 100%; border-collapse: collapse; margin: 0; font-size: 0.86rem; }
+  table.bom-table th, table.bom-table td {
+    border: none; border-bottom: 1px solid var(--border); padding: 10px 12px; text-align: left; vertical-align: middle;
+  }
+  table.bom-table thead th {
+    background: var(--surface-2); color: var(--muted); font-size: 0.74rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.04em; cursor: pointer; user-select: none; white-space: nowrap;
+  }
+  table.bom-table thead th:hover { color: var(--text); }
+  table.bom-table tbody tr.bom-row { cursor: pointer; transition: background 0.12s; }
+  table.bom-table tbody tr.bom-row:hover { background: var(--hover); }
+  table.bom-table tbody tr.bom-row.expanded { background: var(--surface-2); }
+  table.bom-table tbody tr.bom-detail-row td {
+    padding: 0; background: var(--bg); border-bottom: 1px solid var(--border);
+  }
+  .bom-num { text-align: right !important; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .bom-chev {
+    width: 24px; color: var(--muted); transition: transform 0.15s ease; display: inline-flex; align-items: center; justify-content: center;
+  }
+  tr.bom-row.expanded .bom-chev { transform: rotate(90deg); color: var(--text); }
+
+  .bom-part-cell { display: flex; align-items: center; gap: 11px; min-width: 220px; }
+  .bom-thumb {
+    width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--border);
+    background: #ffffff; object-fit: contain; padding: 3px; flex-shrink: 0;
+  }
+  .bom-thumb-placeholder {
+    width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--muted);
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .bom-part-title { font-weight: 600; color: var(--text); line-height: 1.3; }
+  .bom-part-meta { font-size: 0.78rem; color: var(--muted); line-height: 1.35; margin-top: 2px; }
+  .bom-mono { font-family: var(--mono); font-size: 0.8rem; }
+
+  .bom-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 2px 8px; border-radius: 999px; font-size: 0.73rem; font-weight: 600; white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .bom-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  .b-ok { background: rgba(16,185,129,0.12); color: #10b981; border-color: rgba(16,185,129,0.25); }
+  .b-ok .bom-dot { background: #10b981; }
+  .b-warn { background: rgba(245,158,11,0.12); color: #d97706; border-color: rgba(245,158,11,0.28); }
+  .b-warn .bom-dot { background: #f59e0b; }
+  .b-bad { background: rgba(239,68,68,0.12); color: #ef4444; border-color: rgba(239,68,68,0.28); }
+  .b-bad .bom-dot { background: #ef4444; }
+  .b-neutral { background: var(--surface-2); color: var(--muted); border-color: var(--border); }
+  .b-basic { background: rgba(16,185,129,0.10); color: #10b981; border-color: rgba(16,185,129,0.22); }
+  .b-pref { background: rgba(59,130,246,0.10); color: #3b82f6; border-color: rgba(59,130,246,0.22); }
+  .b-ext { background: var(--surface-2); color: var(--muted); border-color: var(--border); }
+
+  .bom-icon-link {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 7px; border: 1px solid var(--border);
+    color: var(--muted); background: var(--bg); text-decoration: none; transition: all 0.15s;
+  }
+  .bom-icon-link:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+
+  /* Expandable JLC/LCSC-style detail drawer */
+  .bom-drawer {
+    padding: 16px 20px 18px 46px;
+    display: grid;
+    grid-template-columns: auto 1.4fr 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  .bom-drawer-img {
+    width: 88px; height: 88px; border-radius: 10px; border: 1px solid var(--border);
+    background: #ffffff; object-fit: contain; padding: 6px;
+  }
+  .bom-kv-grid {
+    display: grid; grid-template-columns: 110px 1fr; gap: 6px 12px; font-size: 0.83rem;
+  }
+  .bom-kv-k { color: var(--muted); font-weight: 500; }
+  .bom-kv-v { color: var(--text); word-break: break-word; }
+  .bom-tiers-box {
+    border: 1px solid var(--border); border-radius: 10px; background: var(--surface); overflow: hidden;
+  }
+  .bom-tiers-head {
+    padding: 7px 12px; font-size: 0.74rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--muted); background: var(--surface-2); border-bottom: 1px solid var(--border);
+  }
+  table.bom-tiers-tbl { width: 100%; border-collapse: collapse; margin: 0; font-size: 0.81rem; }
+  table.bom-tiers-tbl td { padding: 5px 12px; border-bottom: 1px solid var(--border); }
+  table.bom-tiers-tbl tr:last-child td { border-bottom: none; }
+  table.bom-tiers-tbl tr.active-tier td {
+    background: var(--accent-soft); color: var(--accent); font-weight: 600;
+  }
+  .bom-drawer-actions {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px;
+  }
+  .bom-foot {
+    margin-top: 12px; color: var(--muted); font-size: 0.8rem;
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px;
+  }
+  @media (max-width: 900px) {
+    .bom-drawer { grid-template-columns: 1fr; padding-left: 16px; }
+  }
+</style>
+
+<div class="bom-header">
+  <div>
+    <h1>Priced BOM &amp; Availability</h1>
+    <div class="bom-sub">Version <strong>main</strong> · Snapshot fetched 2026-11-27 09:59 UTC · Click any row to inspect price breaks, designators &amp; datasheet</div>
+  </div>
+</div>
+
+<section class="bom-controls">
+  <div class="bom-ctrl-top">
+    <div class="bom-slider-group">
+      <div class="bom-field-label">Board / Assembly Quantity</div>
+      <div class="bom-slider-row">
+        <input id="boardSlider" type="range" min="1" max="500" step="1" value="5" aria-label="Board count slider">
+        <input id="boardInput" class="bom-qty-input" type="number" min="1" max="10000" step="1" value="5" aria-label="Board count">
+        <span class="bom-sub" style="margin:0">boards</span>
+      </div>
+    </div>
+    <div class="bom-field">
+      <label class="bom-field-label" for="sourceSelect">Part Source &amp; Stock</label>
+      <select id="sourceSelect" class="bom-select">
+        <option value="jlc" selected>JLCPCB Parts (SMT)</option>
+        <option value="lcsc">LCSC (Direct Warehouse)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="bom-ctrl-bottom">
+    <span class="bom-sub" style="margin:0 4px 0 0">Presets:</span>
+    <button type="button" class="bom-preset" data-q="1">1</button>
+    <button type="button" class="bom-preset" data-q="2">2</button>
+    <button type="button" class="bom-preset active" data-q="5">5</button>
+    <button type="button" class="bom-preset" data-q="10">10</button>
+    <button type="button" class="bom-preset" data-q="25">25</button>
+    <button type="button" class="bom-preset" data-q="50">50</button>
+    <button type="button" class="bom-preset" data-q="100">100</button>
+    <button type="button" class="bom-preset" data-q="250">250</button>
+    <button type="button" class="bom-preset" data-q="500">500</button>
+    <label id="feeToggleLabel" class="bom-fee-toggle">
+      <input id="includeFeeder" type="checkbox" checked>
+      Include JLCPCB Extended feeder fee ($<span id="feeVal">3.00</span> / unique ext. part)
+    </label>
+  </div>
+</section>
+
+<section class="bom-kpis">
+  <div class="bom-kpi">
+    <div class="bom-kpi-label">Parts / Board</div>
+    <div class="bom-kpi-val" id="kpiPartsPerBoard">$0.00</div>
+    <div class="bom-kpi-sub" id="kpiPartsTotal">Total: $0.00</div>
+  </div>
+  <div class="bom-kpi">
+    <div class="bom-kpi-label" id="kpiFeesLabel">JLC Feeder Fees</div>
+    <div class="bom-kpi-val" id="kpiFees">$0.00</div>
+    <div class="bom-kpi-sub" id="kpiExtCount">0 extended parts</div>
+  </div>
+  <div class="bom-kpi">
+    <div class="bom-kpi-label">Est. Grand Total</div>
+    <div class="bom-kpi-val" id="kpiGrandTotal" style="color:var(--accent)">$0.00</div>
+    <div class="bom-kpi-sub" id="kpiGrandPerBoard">$0.00 / board</div>
+  </div>
+  <div class="bom-kpi">
+    <div class="bom-kpi-label" id="kpiStockLabel">JLC Stock Readiness</div>
+    <div class="bom-kpi-val" id="kpiStockHealth">—</div>
+    <div class="bom-kpi-sub" id="kpiStockSub">—</div>
+  </div>
+</section>
+
+<section class="bom-toolbar">
+  <input id="searchBox" class="bom-search" type="search" placeholder="Search value, MPN, designator, footprint, or LCSC code...">
+  <button type="button" class="bom-pill active" data-filter="all">All</button>
+  <button type="button" class="bom-pill" data-filter="basic" id="pillBasic">Basic / Pref</button>
+  <button type="button" class="bom-pill" data-filter="extended" id="pillExt">Extended</button>
+  <button type="button" class="bom-pill" data-filter="issue">Stock / Missing</button>
+  <button type="button" id="toggleExpandAll" class="bom-btn">Expand all</button>
+  <button type="button" id="exportCsv" class="bom-btn primary">Export CSV (<span id="exportQty">5</span>)</button>
+</section>
+
+<div class="bom-table-card">
+  <div class="bom-table-scroll">
+    <table class="bom-table">
+      <thead>
+        <tr>
+          <th style="width:32px"></th>
+          <th data-sort="comment">Component</th>
+          <th data-sort="lcsc">Part #</th>
+          <th data-sort="active_stock" class="bom-num" id="thStock">JLC Stock</th>
+          <th data-sort="total_qty" class="bom-num">Qty</th>
+          <th data-sort="unit_price" class="bom-num">Unit</th>
+          <th data-sort="line_total" class="bom-num">Total</th>
+          <th style="width:46px;text-align:center">Doc</th>
+        </tr>
+      </thead>
+      <tbody id="bomBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="bom-foot">
+  <span>Total placements/board: <strong id="footPlacements">0</strong> · Unique BOM lines: <strong id="footLines">0</strong></span>
+  <span>Excludes bare PCB fabrication, SMT assembly labor &amp; shipping</span>
+</div>
+
+<script>
+(function() {
+  const BOM_DATA = {"project": "muca2", "display_name": "MUCA2", "board": "MUCA2", "version": "main", "fetched_at": "2026-11-27 09:59 UTC", "extended_part_fee_usd": 3.0, "total_components": 39, "unique_parts": 26, "missing_lcsc_groups": 26, "summaries": {"1": {"boards": 1, "parts_total_usd": 0.0, "parts_per_board_usd": 0.0, "extended_parts_count": 0, "feeder_fees_usd": 0.0, "grand_total_usd": 0.0, "grand_per_board_usd": 0.0, "in_stock_lines": 0, "insufficient_lines": 0, "missing_lcsc_lines": 26, "unpriced_lines": 26}, "5": {"boards": 5, "parts_total_usd": 0.0, "parts_per_board_usd": 0.0, "extended_parts_count": 0, "feeder_fees_usd": 0.0, "grand_total_usd": 0.0, "grand_per_board_usd": 0.0, "in_stock_lines": 0, "insufficient_lines": 0, "missing_lcsc_lines": 26, "unpriced_lines": 26}, "10": {"boards": 10, "parts_total_usd": 0.0, "parts_per_board_usd": 0.0, "extended_parts_count": 0, "feeder_fees_usd": 0.0, "grand_total_usd": 0.0, "grand_per_board_usd": 0.0, "in_stock_lines": 0, "insufficient_lines": 0, "missing_lcsc_lines": 26, "unpriced_lines": 26}, "50": {"boards": 50, "parts_total_usd": 0.0, "parts_per_board_usd": 0.0, "extended_parts_count": 0, "feeder_fees_usd": 0.0, "grand_total_usd": 0.0, "grand_per_board_usd": 0.0, "in_stock_lines": 0, "insufficient_lines": 0, "missing_lcsc_lines": 26, "unpriced_lines": 26}, "100": {"boards": 100, "parts_total_usd": 0.0, "parts_per_board_usd": 0.0, "extended_parts_count": 0, "feeder_fees_usd": 0.0, "grand_total_usd": 0.0, "grand_per_board_usd": 0.0, "in_stock_lines": 0, "insufficient_lines": 0, "missing_lcsc_lines": 26, "unpriced_lines": 26}}, "items": [{"comment": "1uF", "designators": ["C2", "C9", "C10", "C11"], "designator_str": "C2,C9,C10,C11", "footprint": "C_0402_1005Metric", "footprint_full": "Capacitor_SMD:C_0402_1005Metric", "quantity": 4, "lcsc": "", "datasheet": "", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "", "datasheet_viewer_url": "", "lcsc_url": "", "jlc_url": ""}, {"comment": "4.7uF", "designators": ["C5"], "designator_str": "C5", "footprint": "C_0603_1608Metric", "footprint_full": "Capacitor_SMD:C_0603_1608Metric", "quantity": 1, "lcsc": "", "datasheet": "", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "", "datasheet_viewer_url": "", "lcsc_url": "", "jlc_url": ""}, {"comment": "100nF", "designators": ["C12", "C13", "C14"], "designator_str": "C12,C13,C14", "footprint": "C_0402_1005Metric", "footprint_full": "Capacitor_SMD:C_0402_1005Metric", "quantity": 3, "lcsc": "", "datasheet": "", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "", "datasheet_viewer_url": "", "lcsc_url": "", "jlc_url": ""}, {"comment": "CAN_PWR", "designators": ["D1"], "designator_str": "D1", "footprint": "LED_0603_1608Metric", "footprint_full": "LED_SMD:LED_0603_1608Metric", "quantity": 1, "lcsc": "", "datasheet": "", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "", "datasheet_viewer_url": "", "lcsc_url": "", "jlc_url": ""}, {"comment": "3V3", "designators": ["D3"], "designator_str": "D3", "footprint": "LED_0603_1608Metric", "footprint_full": "LED_SMD:LED_0603_1608Metric", "quantity": 1, "lcsc": "", "datasheet": "", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "", "datasheet_viewer_url": "", "lcsc_url": "", "jlc_url": ""}, {"comment": "HB", "designators": ["D4"], "designator_str": "D4", "footprint": "LED_0603_1608Metric", "footprint_full": "LED_SMD:LED_0603_1608Metric", "quantity": 1, "lcsc": "", "datasheet": "", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "", "datasheet_viewer_url": "", "lcsc_url": "", "jlc_url": ""}, {"comment": "SENSE", "designators": ["D5"], "designator_str": "D5", "footprint": "LED_0603_1608Metric", "footprint_full": "LED_SMD:LED_0603_1608Metric", "quantity": 1, "lcsc": "", "datasheet": "", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "", "datasheet_viewer_url": "", "lcsc_url": "", "jlc_url": ""}, {"comment": "COMM", "designators": ["D6"], "designator_str": "D6", "footprint": "LED_0603_1608Metric", "footprint_full": "LED_SMD:LED_0603_1608Metric", "quantity": 1, "lcsc": "", "datasheet": "", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "", "datasheet_viewer_url": "", "lcsc_url": "", "jlc_url": ""}, {"comment": "FAULT", "designators": ["D7"], "designator_str": "D7", "footprint": "LED_0603_1608Metric", "footprint_full": "LED_SMD:LED_0603_1608Metric", "quantity": 1, "lcsc": "", "datasheet": "", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "", "datasheet_viewer_url": "", "lcsc_url": "", "jlc_url": ""}, {"comment": "NUP2105L", "designators": ["D8"], "designator_str": "D8", "footprint": "SOT-23", "footprint_full": "Package_TO_SOT_SMD:SOT-23", "quantity": 1, "lcsc": "", "datasheet": "https://www.onsemi.com/pub_link/Collateral/NUP2105L-D.PDF", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "https://www.onsemi.com/pub_link/Collateral/NUP2105L-D.PDF", "datasheet_viewer_url": "https://www.onsemi.com/pub_link/Collateral/NUP2105L-D.PDF", "lcsc_url": "", "jlc_url": ""}, {"comment": "FT_PWR", "designators": ["D9"], "designator_str": "D9", "footprint": "LED_0603_1608Metric", "footprint_full": "LED_SMD:LED_0603_1608Metric", "quantity": 1, "lcsc": "", "datasheet": "", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "", "datasheet_viewer_url": "", "lcsc_url": "", "jlc_url": ""}, {"comment": "600R@100MHz", "designators": ["FB1"], "designator_str": "FB1", "footprint": "L_0603_1608Metric", "footprint_full": "Inductor_SMD:L_0603_1608Metric", "quantity": 1, "lcsc": "", "datasheet": "", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "", "datasheet_viewer_url": "", "lcsc_url": "", "jlc_url": ""}, {"comment": "SENSOR_TX (2.54mm socket)", "designators": ["J3"], "designator_str": "J3", "footprint": "PinSocket_1x10_P2.54mm_Horizontal", "footprint_full": "Connector_PinSocket_2.54mm:PinSocket_1x10_P2.54mm_Horizontal", "quantity": 1, "lcsc": "", "datasheet": "", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "", "datasheet_viewer_url": "", "lcsc_url": "", "jlc_url": ""}, {"comment": "SENSOR_RX (2.54mm socket)", "designators": ["J4"], "designator_str": "J4", "footprint": "PinSocket_1x10_P2.54mm_Horizontal", "footprint_full": "Connector_PinSocket_2.54mm:PinSocket_1x10_P2.54mm_Horizontal", "quantity": 1, "lcsc": "", "datasheet": "", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "", "datasheet_viewer_url": "", "lcsc_url": "", "jlc_url": ""}, {"comment": "CAN_A (JST-GH)", "designators": ["J5"], "designator_str": "J5", "footprint": "JST_GH_SM04B-GHS-TB_1x04-1MP_P1.25mm_Horizontal", "footprint_full": "Connector_JST:JST_GH_SM04B-GHS-TB_1x04-1MP_P1.25mm_Horizontal", "quantity": 1, "lcsc": "", "datasheet": "", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "", "datasheet_viewer_url": "", "lcsc_url": "", "jlc_url": ""}, {"comment": "CAN_B (JST-GH)", "designators": ["J6"], "designator_str": "J6", "footprint": "JST_GH_SM04B-GHS-TB_1x04-1MP_P1.25mm_Horizontal", "footprint_full": "Connector_JST:JST_GH_SM04B-GHS-TB_1x04-1MP_P1.25mm_Horizontal", "quantity": 1, "lcsc": "", "datasheet": "", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "", "datasheet_viewer_url": "", "lcsc_url": "", "jlc_url": ""}, {"comment": "I2C_DBG", "designators": ["J7"], "designator_str": "J7", "footprint": "PinHeader_1x05_P2.54mm_Vertical", "footprint_full": "Connector_PinHeader_2.54mm:PinHeader_1x05_P2.54mm_Vertical", "quantity": 1, "lcsc": "", "datasheet": "", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "", "datasheet_viewer_url": "", "lcsc_url": "", "jlc_url": ""}, {"comment": "PWR_DBG", "designators": ["J8"], "designator_str": "J8", "footprint": "PinHeader_1x04_P2.54mm_Vertical", "footprint_full": "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical", "quantity": 1, "lcsc": "", "datasheet": "", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "", "datasheet_viewer_url": "", "lcsc_url": "", "jlc_url": ""}, {"comment": "2.2k", "designators": ["R3", "R13", "R14"], "designator_str": "R3,R13,R14", "footprint": "R_0402_1005Metric", "footprint_full": "Resistor_SMD:R_0402_1005Metric", "quantity": 3, "lcsc": "", "datasheet": "", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "", "datasheet_viewer_url": "", "lcsc_url": "", "jlc_url": ""}, {"comment": "1k", "designators": ["R5", "R9", "R10", "R11", "R12", "R18"], "designator_str": "R5,R9,R10,R11,R12,R18", "footprint": "R_0402_1005Metric", "footprint_full": "Resistor_SMD:R_0402_1005Metric", "quantity": 6, "lcsc": "", "datasheet": "", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "", "datasheet_viewer_url": "", "lcsc_url": "", "jlc_url": ""}, {"comment": "10k", "designators": ["R15", "R16"], "designator_str": "R15,R16", "footprint": "R_0402_1005Metric", "footprint_full": "Resistor_SMD:R_0402_1005Metric", "quantity": 2, "lcsc": "", "datasheet": "", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "", "datasheet_viewer_url": "", "lcsc_url": "", "jlc_url": ""}, {"comment": "120", "designators": ["R17"], "designator_str": "R17", "footprint": "R_0603_1608Metric", "footprint_full": "Resistor_SMD:R_0603_1608Metric", "quantity": 1, "lcsc": "", "datasheet": "", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "", "datasheet_viewer_url": "", "lcsc_url": "", "jlc_url": ""}, {"comment": "LM66100", "designators": ["U3"], "designator_str": "U3", "footprint": "SOT-363_SC-70-6", "footprint_full": "Package_TO_SOT_SMD:SOT-363_SC-70-6", "quantity": 1, "lcsc": "", "datasheet": "https://www.ti.com/lit/ds/symlink/lm66100.pdf", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "https://www.ti.com/lit/ds/symlink/lm66100.pdf", "datasheet_viewer_url": "https://www.ti.com/lit/ds/symlink/lm66100.pdf", "lcsc_url": "", "jlc_url": ""}, {"comment": "XIAO ESP32S3", "designators": ["U5"], "designator_str": "U5", "footprint": "XIAO-ESP32S3-SMD", "footprint_full": "MUCA2:XIAO-ESP32S3-SMD", "quantity": 1, "lcsc": "", "datasheet": "", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "", "datasheet_viewer_url": "", "lcsc_url": "", "jlc_url": ""}, {"comment": "FT5316DME", "designators": ["U6"], "designator_str": "U6", "footprint": "QFN-48-1EP_6x6mm_P0.4mm_EP4.6x4.6mm", "footprint_full": "Package_DFN_QFN:QFN-48-1EP_6x6mm_P0.4mm_EP4.6x4.6mm", "quantity": 1, "lcsc": "", "datasheet": "https://www.lcd-module.de/fileadmin/eng/pdf/zubehoer/FT5x16_DataSheet_V10.pdf", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "https://www.lcd-module.de/fileadmin/eng/pdf/zubehoer/FT5x16_DataSheet_V10.pdf", "datasheet_viewer_url": "https://www.lcd-module.de/fileadmin/eng/pdf/zubehoer/FT5x16_DataSheet_V10.pdf", "lcsc_url": "", "jlc_url": ""}, {"comment": "SN65HVD230", "designators": ["U7"], "designator_str": "U7", "footprint": "SOIC-8_3.9x4.9mm_P1.27mm", "footprint_full": "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm", "quantity": 1, "lcsc": "", "datasheet": "http://www.ti.com/lit/ds/symlink/sn65hvd230.pdf", "layers": ["F.Cu"], "found": false, "stale": false, "mfr": "", "brand": "", "description": "", "library_type": "Missing", "jlc_stock": null, "lcsc_stock": null, "stock": null, "jlc_price_tiers": [], "lcsc_price_tiers": [], "price_tiers": [], "product_image": "", "datasheet_url": "http://www.ti.com/lit/ds/symlink/sn65hvd230.pdf", "datasheet_viewer_url": "http://www.ti.com/lit/ds/symlink/sn65hvd230.pdf", "lcsc_url": "", "jlc_url": ""}]};
+
+  let boardCount = 5;
+  let partSource = "jlc"; // "jlc" | "lcsc"
+  let includeFeeder = true;
+  let activeFilter = "all";
+  let searchTerm = "";
+  let sortKey = "designator_str";
+  let sortAsc = true;
+  const expandedSet = new Set();
+
+  const slider = document.getElementById("boardSlider");
+  const numInput = document.getElementById("boardInput");
+  const sourceSelect = document.getElementById("sourceSelect");
+  const feeCheckbox = document.getElementById("includeFeeder");
+  const feeToggleLabel = document.getElementById("feeToggleLabel");
+  const feeUnit = Number(BOM_DATA.extended_part_fee_usd ?? 3.0);
+
+  document.getElementById("feeVal").textContent = feeUnit.toFixed(2);
+  document.getElementById("footPlacements").textContent = BOM_DATA.total_components;
+  document.getElementById("footLines").textContent = BOM_DATA.unique_parts;
+
+  const CHIP_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M9 7V4m6 3V4M9 20v-3m6 3v-3M7 9H4m3 6H4m16-6h-3m3 6h-3"/></svg>';
+  const PDF_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
+  const CHEV_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+
+  function escHtml(s) {
+    return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+
+  function fmtUsd(v, digits = 2) {
+    if (v === null || v === undefined || Number.isNaN(v)) return "—";
+    return "$" + v.toFixed(digits);
+  }
+
+  function fmtUnit(v) {
+    if (v === null || v === undefined) return "—";
+    if (v < 0.01) return "$" + v.toFixed(5);
+    if (v < 1) return "$" + v.toFixed(4);
+    return "$" + v.toFixed(3);
+  }
+
+  function getActiveTierIndex(tiers, totalQty) {
+    if (!tiers || !tiers.length) return -1;
+    let idx = 0;
+    for (let i = 0; i < tiers.length; i++) {
+      if (totalQty >= tiers[i].min_qty) idx = i;
+      else break;
+    }
+    return idx;
+  }
+
+  function computeRows() {
+    return BOM_DATA.items.map((it, idx) => {
+      const rowId = `${it.designator_str}__${idx}`;
+      const totalQty = it.quantity * boardCount;
+      const activeTiers = partSource === "jlc"
+        ? ((it.jlc_price_tiers && it.jlc_price_tiers.length) ? it.jlc_price_tiers : (it.price_tiers || []))
+        : ((it.lcsc_price_tiers && it.lcsc_price_tiers.length) ? it.lcsc_price_tiers : (it.price_tiers || []));
+      const tierIdx = getActiveTierIndex(activeTiers, totalQty);
+      const unitPrice = tierIdx >= 0 ? activeTiers[tierIdx].unit_price : null;
+      const lineTotal = unitPrice !== null ? unitPrice * totalQty : null;
+      const hasLcsc = Boolean(it.lcsc);
+
+      // Strictly use the selected supplier's stock (no silent cross-supplier fallback)
+      const activeStock = partSource === "jlc" ? it.jlc_stock : it.lcsc_stock;
+
+      let status = "ok";
+      if (!hasLcsc) status = "missing";
+      else if (activeStock === null || activeStock === undefined) status = "unknown";
+      else if (activeStock === 0) status = "out";
+      else if (activeStock < totalQty) status = "short";
+      else if (activeStock < totalQty * 3) status = "low";
+
+      return {
+        ...it,
+        _rowId: rowId,
+        total_qty: totalQty,
+        active_tiers: activeTiers,
+        tier_idx: tierIdx,
+        unit_price: unitPrice,
+        line_total: lineTotal,
+        active_stock: activeStock,
+        status,
+      };
+    });
+  }
+
+  function shortRefs(refs) {
+    if (!refs || !refs.length) return "";
+    if (refs.length <= 4) return refs.join(", ");
+    return refs.slice(0, 4).join(", ") + ` +${refs.length - 4}`;
+  }
+
+  function render() {
+    const isJlc = partSource === "jlc";
+    document.getElementById("thStock").textContent = isJlc ? "JLC Stock" : "LCSC Stock";
+    document.getElementById("kpiStockLabel").textContent = isJlc ? "JLC Stock Readiness" : "LCSC Stock Readiness";
+    document.getElementById("kpiFeesLabel").textContent = isJlc ? "JLC Feeder Fees" : "Feeder Fees (N/A)";
+    feeToggleLabel.classList.toggle("disabled", !isJlc);
+    document.getElementById("pillBasic").style.display = isJlc ? "" : "none";
+    document.getElementById("pillExt").style.display = isJlc ? "" : "none";
+    if (!isJlc && (activeFilter === "basic" || activeFilter === "extended")) {
+      activeFilter = "all";
+      document.querySelectorAll(".bom-pill").forEach(b => b.classList.toggle("active", b.dataset.filter === "all"));
+    }
+
+    const rows = computeRows();
+    let partsTotal = 0;
+    const extCodes = new Set();
+    let okLines = 0, issueLines = 0, missingLines = 0;
+
+    for (const r of rows) {
+      if (r.line_total !== null) partsTotal += r.line_total;
+      if (r.lcsc && r.library_type !== "Basic" && r.library_type !== "Preferred") extCodes.add(r.lcsc);
+      if (r.status === "ok" || r.status === "low") okLines++;
+      else {
+        issueLines++;
+        if (r.status === "missing") missingLines++;
+      }
+    }
+
+    const extCount = extCodes.size;
+    const fees = (isJlc && includeFeeder) ? extCount * feeUnit : 0;
+    const grand = partsTotal + fees;
+
+    document.getElementById("kpiPartsPerBoard").textContent = fmtUsd(partsTotal / boardCount);
+    document.getElementById("kpiPartsTotal").textContent = `Total (${boardCount} bd): ${fmtUsd(partsTotal)}`;
+    document.getElementById("kpiFees").textContent = isJlc ? fmtUsd(fees) : "$0.00";
+    document.getElementById("kpiExtCount").textContent = isJlc
+      ? `${extCount} unique extended part${extCount === 1 ? "" : "s"}`
+      : "No SMT feeder fees on LCSC direct";
+    document.getElementById("kpiGrandTotal").textContent = fmtUsd(grand);
+    document.getElementById("kpiGrandPerBoard").textContent = `${fmtUsd(grand / boardCount)} / board`;
+    document.getElementById("exportQty").textContent = boardCount;
+
+    const stockEl = document.getElementById("kpiStockHealth");
+    stockEl.textContent = `${okLines} / ${rows.length}`;
+    stockEl.style.color = issueLines === 0 ? "#10b981" : (missingLines > 0 && issueLines === missingLines ? "#d97706" : "#ef4444");
+    document.getElementById("kpiStockSub").textContent =
+      issueLines === 0
+        ? `All parts available for ${boardCount} boards`
+        : `${issueLines} line${issueLines === 1 ? "" : "s"} need attention (${missingLines} missing LCSC)`;
+
+    // Filter
+    const q = searchTerm.trim().toLowerCase();
+    const filtered = rows.filter(r => {
+      if (activeFilter === "basic" && r.library_type !== "Basic" && r.library_type !== "Preferred") return false;
+      if (activeFilter === "extended" && (!r.lcsc || r.library_type === "Basic" || r.library_type === "Preferred")) return false;
+      if (activeFilter === "issue" && r.status === "ok") return false;
+      if (!q) return true;
+      const hay = `${r.designator_str} ${r.comment} ${r.footprint} ${r.lcsc} ${r.mfr || ""} ${r.brand || ""} ${r.description || ""}`.toLowerCase();
+      return hay.includes(q);
+    });
+
+    // Sort
+    filtered.sort((a, b) => {
+      let va = a[sortKey], vb = b[sortKey];
+      if (va === null || va === undefined) va = sortAsc ? Infinity : -Infinity;
+      if (vb === null || vb === undefined) vb = sortAsc ? Infinity : -Infinity;
+      if (typeof va === "number" && typeof vb === "number") return sortAsc ? va - vb : vb - va;
+      return sortAsc
+        ? String(va).localeCompare(String(vb), undefined, { numeric: true })
+        : String(vb).localeCompare(String(va), undefined, { numeric: true });
+    });
+
+    const tbody = document.getElementById("bomBody");
+    const htmlParts = [];
+
+    for (const r of filtered) {
+      const isOpen = expandedSet.has(r._rowId);
+      const partUrl = isJlc ? r.jlc_url : r.lcsc_url;
+      const thumbHtml = r.product_image
+        ? `<img class="bom-thumb" src="${escHtml(r.product_image)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+        : `<span class="bom-thumb-placeholder">${CHIP_SVG}</span>`;
+
+      let typePill = "";
+      if (isJlc && r.lcsc) {
+        if (r.library_type === "Basic") typePill = '<span class="bom-badge b-basic">Basic</span>';
+        else if (r.library_type === "Preferred") typePill = '<span class="bom-badge b-pref">Pref</span>';
+        else typePill = '<span class="bom-badge b-ext">Extended</span>';
+      }
+
+      let stockBadge = "";
+      if (r.status === "missing") stockBadge = '<span class="bom-badge b-warn"><span class="bom-dot"></span>No LCSC</span>';
+      else if (r.status === "unknown") stockBadge = `<span class="bom-badge b-neutral">N/A (${isJlc ? "JLC" : "LCSC"})</span>`;
+      else if (r.status === "out") stockBadge = '<span class="bom-badge b-bad"><span class="bom-dot"></span>Out of stock</span>';
+      else if (r.status === "short") stockBadge = `<span class="bom-badge b-bad"><span class="bom-dot"></span>${r.active_stock.toLocaleString()} / ${r.total_qty}</span>`;
+      else if (r.status === "low") stockBadge = `<span class="bom-badge b-warn"><span class="bom-dot"></span>${r.active_stock.toLocaleString()}</span>`;
+      else stockBadge = `<span class="bom-badge b-ok"><span class="bom-dot"></span>${r.active_stock.toLocaleString()}</span>`;
+
+      const lcscLink = r.lcsc
+        ? `<a class="bom-mono" href="${escHtml(partUrl)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">${escHtml(r.lcsc)}</a>`
+        : '<span class="bom-badge b-warn">Missing</span>';
+
+      const docLink = r.datasheet_viewer_url
+        ? `<a class="bom-icon-link" href="${escHtml(r.datasheet_viewer_url)}" target="_blank" rel="noopener noreferrer" title="Open datasheet in new tab" onclick="event.stopPropagation()">${PDF_SVG}</a>`
+        : '<span style="color:var(--muted)">—</span>';
+
+      htmlParts.push(`
+        <tr class="bom-row ${isOpen ? "expanded" : ""}" data-id="${escHtml(r._rowId)}">
+          <td><span class="bom-chev">${CHEV_SVG}</span></td>
+          <td>
+            <div class="bom-part-cell">
+              ${thumbHtml}
+              <div>
+                <div class="bom-part-title">${escHtml(r.comment)}</div>
+                <div class="bom-part-meta">
+                  <span class="bom-mono">${escHtml(shortRefs(r.designators))}</span>
+                  ${r.mfr ? ` · ${escHtml(r.mfr)}` : ""}
+                </div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-start">
+              ${lcscLink}
+              ${typePill}
+            </div>
+          </td>
+          <td class="bom-num">${stockBadge}</td>
+          <td class="bom-num">
+            <strong>${r.total_qty}</strong>
+            <div class="bom-part-meta">${r.quantity}/bd</div>
+          </td>
+          <td class="bom-num">${fmtUnit(r.unit_price)}</td>
+          <td class="bom-num"><strong>${fmtUsd(r.line_total, 3)}</strong></td>
+          <td style="text-align:center">${docLink}</td>
+        </tr>
+      `);
+
+      if (isOpen) {
+        const bigImg = r.product_image
+          ? `<img class="bom-drawer-img" src="${escHtml(r.product_image)}" alt="${escHtml(r.comment)}" loading="lazy">`
+          : `<div class="bom-drawer-img" style="display:flex;align-items:center;justify-content:center;background:var(--surface-2);color:var(--muted)">${CHIP_SVG}</div>`;
+
+        const jlcStockStr = (r.jlc_stock !== null && r.jlc_stock !== undefined) ? r.jlc_stock.toLocaleString() : "N/A";
+        const lcscStockStr = (r.lcsc_stock !== null && r.lcsc_stock !== undefined) ? r.lcsc_stock.toLocaleString() : "N/A";
+
+        let tiersHtml = `<div class="bom-tiers-box"><div class="bom-tiers-head">${isJlc ? "JLCPCB SMT" : "LCSC"} Price Breaks</div>`;
+        if (r.active_tiers && r.active_tiers.length) {
+          tiersHtml += '<table class="bom-tiers-tbl"><tbody>';
+          r.active_tiers.forEach((t, ti) => {
+            tiersHtml += `<tr class="${ti === r.tier_idx ? "active-tier" : ""}"><td>${t.min_qty.toLocaleString()}+</td><td class="bom-num">${fmtUnit(t.unit_price)}</td></tr>`;
+          });
+          tiersHtml += '</tbody></table>';
+        } else {
+          tiersHtml += '<div style="padding:10px 12px;font-size:0.8rem;color:var(--muted)">No price break data</div>';
+        }
+        tiersHtml += '</div>';
+
+        const actions = [];
+        if (r.datasheet_viewer_url) {
+          actions.push(`<a class="bom-btn primary" href="${escHtml(r.datasheet_viewer_url)}" target="_blank" rel="noopener noreferrer">Open Datasheet ↗</a>`);
+        }
+        if (r.jlc_url) {
+          actions.push(`<a class="bom-btn" href="${escHtml(r.jlc_url)}" target="_blank" rel="noopener noreferrer">JLCPCB Part ↗</a>`);
+        }
+        if (r.lcsc_url) {
+          actions.push(`<a class="bom-btn" href="${escHtml(r.lcsc_url)}" target="_blank" rel="noopener noreferrer">LCSC Page ↗</a>`);
+        }
+
+        htmlParts.push(`
+          <tr class="bom-detail-row">
+            <td colspan="8">
+              <div class="bom-drawer">
+                <div>${bigImg}</div>
+                <div>
+                  <div class="bom-kv-grid">
+                    <div class="bom-kv-k">Designators</div>
+                    <div class="bom-kv-v bom-mono">${escHtml(r.designator_str)}</div>
+                    <div class="bom-kv-k">Footprint</div>
+                    <div class="bom-kv-v bom-mono">${escHtml(r.footprint)}</div>
+                    ${r.mfr ? `<div class="bom-kv-k">MPN / Brand</div><div class="bom-kv-v">${escHtml(r.mfr)}${r.brand ? " · " + escHtml(r.brand) : ""}</div>` : ""}
+                    ${r.description ? `<div class="bom-kv-k">Description</div><div class="bom-kv-v">${escHtml(r.description)}</div>` : ""}
+                    <div class="bom-kv-k">Availability</div>
+                    <div class="bom-kv-v">JLCPCB SMT: <strong>${jlcStockStr}</strong> · LCSC Warehouse: <strong>${lcscStockStr}</strong></div>
+                  </div>
+                  <div class="bom-drawer-actions">${actions.join("")}</div>
+                </div>
+                <div>${tiersHtml}</div>
+              </div>
+            </td>
+          </tr>
+        `);
+      }
+    }
+
+    tbody.innerHTML = htmlParts.join("");
+
+    // Bind row fold/unfold click handlers
+    tbody.querySelectorAll("tr.bom-row").forEach(tr => {
+      tr.addEventListener("click", () => {
+        const id = tr.dataset.id;
+        if (expandedSet.has(id)) expandedSet.delete(id);
+        else expandedSet.add(id);
+        render();
+      });
+    });
+
+    const expandBtn = document.getElementById("toggleExpandAll");
+    expandBtn.textContent = expandedSet.size > 0 ? "Collapse all" : "Expand all";
+  }
+
+  function setBoards(val) {
+    const n = Math.max(1, Math.min(10000, parseInt(val, 10) || 1));
+    boardCount = n;
+    slider.value = Math.min(500, n);
+    numInput.value = n;
+    document.querySelectorAll(".bom-preset[data-q]").forEach(b => {
+      b.classList.toggle("active", Number(b.dataset.q) === n);
+    });
+    render();
+  }
+
+  slider.addEventListener("input", e => setBoards(e.target.value));
+  numInput.addEventListener("input", e => setBoards(e.target.value));
+  sourceSelect.addEventListener("change", e => { partSource = e.target.value; render(); });
+  feeCheckbox.addEventListener("change", e => { includeFeeder = e.target.checked; render(); });
+  document.getElementById("searchBox").addEventListener("input", e => { searchTerm = e.target.value; render(); });
+
+  document.querySelectorAll(".bom-preset[data-q]").forEach(btn => {
+    btn.addEventListener("click", () => setBoards(btn.dataset.q));
+  });
+  document.querySelectorAll(".bom-pill").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".bom-pill").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      activeFilter = btn.dataset.filter;
+      render();
+    });
+  });
+  document.querySelectorAll("table.bom-table thead th[data-sort]").forEach(th => {
+    th.addEventListener("click", () => {
+      const k = th.dataset.sort;
+      if (sortKey === k) sortAsc = !sortAsc;
+      else { sortKey = k; sortAsc = true; }
+      render();
+    });
+  });
+
+  document.getElementById("toggleExpandAll").addEventListener("click", () => {
+    if (expandedSet.size > 0) {
+      expandedSet.clear();
+    } else {
+      computeRows().forEach(r => expandedSet.add(r._rowId));
+    }
+    render();
+  });
+
+  document.getElementById("exportCsv").addEventListener("click", () => {
+    const rows = computeRows();
+    const srcLabel = partSource === "jlc" ? "JLCPCB" : "LCSC";
+    const header = ["Designators", "Value", "Footprint", "LCSC Part #", "JLC Type", `${srcLabel} Stock`, "Qty/Board", `Total Qty (${boardCount} bd)`, "Unit Price (USD)", "Line Total (USD)", "Datasheet"];
+    const esc = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const lines = [header.map(esc).join(",")];
+    for (const r of rows) {
+      lines.push([
+        r.designator_str, r.comment, r.footprint, r.lcsc, r.library_type,
+        r.active_stock ?? "", r.quantity, r.total_qty,
+        r.unit_price !== null ? r.unit_price.toFixed(5) : "",
+        r.line_total !== null ? r.line_total.toFixed(4) : "",
+        r.datasheet_viewer_url || ""
+      ].map(esc).join(","));
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${BOM_DATA.project}-${BOM_DATA.version}-bom-${partSource}-${boardCount}pcs.csv`;
+    a.click();
+  });
+
+  render();
+})();
+</script>
+
+    </main>
+  </div>
+
+<script>
+  document.getElementById("themeToggle").addEventListener("click", () => {
+    const cur = document.documentElement.getAttribute("data-theme") || "dark";
+    const nxt = cur === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", nxt);
+    localStorage.setItem("espin-theme", nxt);
+  });
+  document.getElementById("menuToggle").addEventListener("click", () => {
+    document.getElementById("sidebar").classList.toggle("open");
+  });
+
+  // Dynamic multi-version / branch switcher populated from root versions.json
+  (async function() {
+    const sel = document.getElementById("versionSwitcher");
+    if (!sel) return;
+    const rootRel = sel.dataset.rootRel || "..";
+    const currentId = sel.dataset.current || "";
+    const pageName = sel.dataset.page || "index.html";
+    try {
+      const resp = await fetch(rootRel + "/versions.json", { cache: "no-cache" });
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const versions = data.versions || [];
+      if (!versions.length) return;
+
+      const releases = versions.filter(v => v.type === "latest" || v.type === "tag");
+      const branches = versions.filter(v => v.type === "branch");
+      const others = versions.filter(v => !["latest", "tag", "branch"].includes(v.type));
+
+      sel.innerHTML = "";
+      function addGroup(label, items) {
+        if (!items.length) return;
+        const og = document.createElement("optgroup");
+        og.label = label;
+        for (const v of items) {
+          const opt = document.createElement("option");
+          opt.value = v.id;
+          const sha = v.sha ? ` · ${v.sha.slice(0, 7)}` : "";
+          opt.textContent = `${v.label}${sha}`;
+          if (v.id === currentId) opt.selected = true;
+          og.appendChild(opt);
+        }
+        sel.appendChild(og);
+      }
+      addGroup("Releases", releases);
+      addGroup("Branches", branches);
+      addGroup("Other", others);
+
+      sel.addEventListener("change", () => {
+        const target = sel.value;
+        if (target && target !== currentId) {
+          window.location.href = `${rootRel}/${target}/${pageName}`;
+        }
+      });
+    } catch (_e) {
+      // Standalone/local preview without root versions.json
+    }
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+{
+  "version": "main",
+  "version_id": "main",
+  "commit_sha": "42600b9",
+  "copied_3d": [
+    [
+      "top",
+      "renders/pcb-3d-top.png"
+    ],
+    [
+      "bottom",
+      "renders/pcb-3d-bottom.png"
+    ],
+    [
+      "iso-top",
+      "renders/pcb-3d-iso-top.png"
+    ],
+    [
+      "iso-bottom",
+      "renders/pcb-3d-iso-bottom.png"
+    ]
+  ],
+  "copied_2d": [
+    [
+      "2D Top View",
+      "renders/pcb-2d-top.svg"
+    ],
+    [
+      "2D Bottom View",
+      "renders/pcb-2d-bottom.svg"
+    ]
+  ],
+  "copied_sch_svgs": [
+    [
+      "MUCA2-CAN",
+      "renders/sch-MUCA2-CAN.svg"
+    ],
+    [
+      "MUCA2-MCU",
+      "renders/sch-MUCA2-MCU.svg"
+    ],
+    [
+      "MUCA2-Power",
+      "renders/sch-MUCA2-Power.svg"
+    ],
+    [
+      "MUCA2-Touch AFE",
+      "renders/sch-MUCA2-Touch AFE.svg"
+    ],
+    [
+      "MUCA2",
+      "renders/sch-MUCA2.svg"
+    ]
+  ],
+  "dl_entries": [
+    [
+      "JLCPCB Full PCBA Bundle (ZIP)",
+      "files/muca2-main-jlcpcb-production.zip",
+      "49 KB"
+    ],
+    [
+      "JLCPCB Gerbers + Drills (ZIP)",
+      "files/muca2-main-jlcpcb-gerbers.zip",
+      "49 KB"
+    ],
+    [
+      "JLCPCB BOM (CSV)",
+      "files/muca2-main-jlcpcb-bom.csv",
+      "1 KB"
+    ],
+    [
+      "JLCPCB Pick & Place CPL (CSV)",
+      "files/muca2-main-jlcpcb-cpl.csv",
+      "1 KB"
+    ],
+    [
+      "Priced BOM Snapshot (CSV)",
+      "files/muca2-main-bom-priced.csv",
+      "1 KB"
+    ],
+    [
+      "Schematic PDF",
+      "files/muca2-main-schematic.pdf",
+      "185 KB"
+    ],
+    [
+      "3D Mechanical Model (STEP)",
+      "files/muca2-main-3d.step",
+      "2,290 KB"
+    ],
+    [
+      "PCB Renders Pack (ZIP)",
+      "files/muca2-main-renders.zip",
+      "1,008 KB"
+    ]
+  ]
+}

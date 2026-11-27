@@ -1,0 +1,27 @@
+Designators,Value,Footprint,Qty/Board,LCSC Part #,JLC Type,JLC Stock,LCSC Stock,Unit @1bd (USD),Unit @5bd (USD),Unit @10bd (USD),Unit @50bd (USD),MPN,Datasheet
+"C2,C9,C10,C11",1uF,C_0402_1005Metric,4,,Missing,,,,,,,,
+C5,4.7uF,C_0603_1608Metric,1,,Missing,,,,,,,,
+"C12,C13,C14",100nF,C_0402_1005Metric,3,,Missing,,,,,,,,
+D1,CAN_PWR,LED_0603_1608Metric,1,,Missing,,,,,,,,
+D3,3V3,LED_0603_1608Metric,1,,Missing,,,,,,,,
+D4,HB,LED_0603_1608Metric,1,,Missing,,,,,,,,
+D5,SENSE,LED_0603_1608Metric,1,,Missing,,,,,,,,
+D6,COMM,LED_0603_1608Metric,1,,Missing,,,,,,,,
+D7,FAULT,LED_0603_1608Metric,1,,Missing,,,,,,,,
+D8,NUP2105L,SOT-23,1,,Missing,,,,,,,,https://www.onsemi.com/pub_link/Collateral/NUP2105L-D.PDF
+D9,FT_PWR,LED_0603_1608Metric,1,,Missing,,,,,,,,
+FB1,600R@100MHz,L_0603_1608Metric,1,,Missing,,,,,,,,
+J3,SENSOR_TX (2.54mm socket),PinSocket_1x10_P2.54mm_Horizontal,1,,Missing,,,,,,,,
+J4,SENSOR_RX (2.54mm socket),PinSocket_1x10_P2.54mm_Horizontal,1,,Missing,,,,,,,,
+J5,CAN_A (JST-GH),JST_GH_SM04B-GHS-TB_1x04-1MP_P1.25mm_Horizontal,1,,Missing,,,,,,,,
+J6,CAN_B (JST-GH),JST_GH_SM04B-GHS-TB_1x04-1MP_P1.25mm_Horizontal,1,,Missing,,,,,,,,
+J7,I2C_DBG,PinHeader_1x05_P2.54mm_Vertical,1,,Missing,,,,,,,,
+J8,PWR_DBG,PinHeader_1x04_P2.54mm_Vertical,1,,Missing,,,,,,,,
+"R3,R13,R14",2.2k,R_0402_1005Metric,3,,Missing,,,,,,,,
+"R5,R9,R10,R11,R12,R18",1k,R_0402_1005Metric,6,,Missing,,,,,,,,
+"R15,R16",10k,R_0402_1005Metric,2,,Missing,,,,,,,,
+R17,120,R_0603_1608Metric,1,,Missing,,,,,,,,
+U3,LM66100,SOT-363_SC-70-6,1,,Missing,,,,,,,,https://www.ti.com/lit/ds/symlink/lm66100.pdf
+U5,XIAO ESP32S3,XIAO-ESP32S3-SMD,1,,Missing,,,,,,,,
+U6,FT5316DME,QFN-48-1EP_6x6mm_P0.4mm_EP4.6x4.6mm,1,,Missing,,,,,,,,https://www.lcd-module.de/fileadmin/eng/pdf/zubehoer/FT5x16_DataSheet_V10.pdf
+U7,SN65HVD230,SOIC-8_3.9x4.9mm_P1.27mm,1,,Missing,,,,,,,,http://www.ti.com/lit/ds/symlink/sn65hvd230.pdf
