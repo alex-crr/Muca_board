@@ -1,0 +1,213 @@
+name: Docs Fast Update & Branch Cleanup
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/**"
+      - "ci/config.yml"
+      - "ci/scripts/build_docs.py"
+      - "ci/scripts/jlc_bom_pricing.py"
+  workflow_dispatch:
+    inputs:
+      refresh_bom_prices:
+        description: "Also refresh live JLCPCB/LCSC stock & prices without rebuilding KiCad files"
+        type: boolean
+        default: false
+  delete:
+
+concurrency:
+  group: kicad-pages-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  docs-fast:
+    name: Fast Docs-Only Rebuild (No KiCad)
+    if: github.event_name != 'delete'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          path: repo
+
+      - name: Install lightweight Python docs deps (~3s)
+        run: pip install --quiet -r repo/ci/requirements.txt
+
+      - name: Fetch existing gh-pages version store
+        id: store
+        run: |
+          STORAGE_BRANCH=$(python3 -c "import yaml; print(yaml.safe_load(open('repo/ci/config.yml')).get('pages', {}).get('storage_branch', 'gh-pages'))")
+          DEFAULT_BRANCH=$(python3 -c "import yaml; print(yaml.safe_load(open('repo/ci/config.yml')).get('pages', {}).get('default_branch', 'main'))")
+          SHORT_SHA=$(printf '%s' "$GITHUB_SHA" | cut -c1-7)
+
+          echo "storage_branch=${STORAGE_BRANCH}" >> "$GITHUB_OUTPUT"
+          echo "default_branch=${DEFAULT_BRANCH}" >> "$GITHUB_OUTPUT"
+          echo "commit_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+
+          mkdir -p pages-store
+          cd pages-store
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+
+          if git ls-remote --exit-code --heads origin "${STORAGE_BRANCH}" >/dev/null 2>&1; then
+            git fetch --depth=1 origin "${STORAGE_BRANCH}"
+            git checkout -q -B "${STORAGE_BRANCH}" "origin/${STORAGE_BRANCH}"
+            if [ -d "${DEFAULT_BRANCH}/_meta" ]; then
+              echo "has_existing=true" >> "$GITHUB_OUTPUT"
+              echo "reuse_dir=pages-store/${DEFAULT_BRANCH}" >> "$GITHUB_OUTPUT"
+            elif [ -d "latest/_meta" ]; then
+              echo "has_existing=true" >> "$GITHUB_OUTPUT"
+              echo "reuse_dir=pages-store/latest" >> "$GITHUB_OUTPUT"
+            else
+              echo "has_existing=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "has_existing=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Notice if no base hardware build exists yet
+        if: steps.store.outputs.has_existing != 'true'
+        run: |
+          echo "::notice title=Skipping Fast Docs Rebuild::No existing hardware build found on gh-pages yet. Run 'KiCad Release, Production & Docs' once first to seed hardware artifacts."
+
+      - name: Optional Live BOM Price Refresh (No KiCad)
+        if: steps.store.outputs.has_existing == 'true' && inputs.refresh_bom_prices == true
+        run: |
+          REUSE="${{ steps.store.outputs.reuse_dir }}"
+          if [ -f "${REUSE}/_meta/bom-priced.json" ]; then
+            mkdir -p refreshed-bom
+            if [ -d "${REUSE}/part-images" ]; then
+              cp -r "${REUSE}/part-images" refreshed-bom/part-images
+            fi
+            python3 repo/ci/scripts/jlc_bom_pricing.py \
+              --bom-json "${REUSE}/_meta/bom-priced.json" \
+              --cache-json "${REUSE}/_meta/bom-priced.json" \
+              --out-dir refreshed-bom \
+              --version "${{ steps.store.outputs.default_branch }}" \
+              --config repo/ci/config.yml
+          fi
+
+      - name: Recompile Manual Docs & HTML Shell (Reusing Hardware Artifacts)
+        if: steps.store.outputs.has_existing == 'true'
+        run: |
+          BOM_ARGS=""
+          if [ -f refreshed-bom/bom-priced.json ]; then
+            BOM_ARGS="--bom-json refreshed-bom/bom-priced.json --part-images-dir refreshed-bom/part-images"
+          fi
+          python3 repo/ci/scripts/build_docs.py \
+            --config repo/ci/config.yml \
+            --out-dir rebuilt-docs \
+            --version "${{ steps.store.outputs.default_branch }}" \
+            --version-id "${{ steps.store.outputs.default_branch }}" \
+            --commit-sha "${{ steps.store.outputs.commit_sha }}" \
+            --reuse-site "${{ steps.store.outputs.reuse_dir }}" \
+            ${BOM_ARGS}
+
+          python3 repo/ci/scripts/pages_manager.py publish \
+            --pages-root pages-store \
+            --site-dir rebuilt-docs/site \
+            --version-id "${{ steps.store.outputs.default_branch }}" \
+            --label "${{ steps.store.outputs.default_branch }}" \
+            --ref-type branch \
+            --sha "${{ steps.store.outputs.commit_sha }}"
+
+          cd pages-store
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -q -m "Fast docs update: ${{ steps.store.outputs.default_branch }} (${{ steps.store.outputs.commit_sha }})"
+            git push origin "${{ steps.store.outputs.storage_branch }}"
+          fi
+          cd ..
+          rm -rf pages-store/.git
+
+      - name: Upload GitHub Pages Artifact
+        if: steps.store.outputs.has_existing == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages-store
+
+      - name: Deploy to GitHub Pages
+        if: steps.store.outputs.has_existing == 'true'
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  prune-deleted-branch:
+    name: Prune Deleted Branch Docs Preview
+    if: github.event_name == 'delete' && github.event.ref_type == 'branch'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout repo scripts
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          path: repo
+
+      - name: Install PyYAML
+        run: pip install --quiet PyYAML
+
+      - name: Prune branch folder from gh-pages if present
+        id: prune
+        run: |
+          STORAGE_BRANCH=$(python3 -c "import yaml; print(yaml.safe_load(open('repo/ci/config.yml')).get('pages', {}).get('storage_branch', 'gh-pages'))")
+          SLUG=$(printf '%s' "${{ github.event.ref }}" | tr '/ ' '--' | tr -cd 'A-Za-z0-9._-')
+          VER_ID="branches/${SLUG}"
+
+          mkdir -p pages-store
+          cd pages-store
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+
+          if ! git ls-remote --exit-code --heads origin "${STORAGE_BRANCH}" >/dev/null 2>&1; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git fetch --depth=1 origin "${STORAGE_BRANCH}"
+          git checkout -q -B "${STORAGE_BRANCH}" "origin/${STORAGE_BRANCH}"
+          cd ..
+
+          if [ ! -d "pages-store/${VER_ID}" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          python3 repo/ci/scripts/pages_manager.py prune \
+            --pages-root pages-store \
+            --version-id "${VER_ID}"
+
+          cd pages-store
+          git add -A
+          git commit -q -m "Prune deleted branch docs: ${VER_ID}"
+          git push origin "${STORAGE_BRANCH}"
+          cd ..
+          rm -rf pages-store/.git
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Upload GitHub Pages Artifact
+        if: steps.prune.outputs.changed == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages-store
+
+      - name: Deploy to GitHub Pages
+        if: steps.prune.outputs.changed == 'true'
+        id: deployment
+        uses: actions/deploy-pages@v4

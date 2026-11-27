@@ -1,0 +1,22 @@
+# JLCPCB Pick-and-Place (CPL) rotation & position offset overrides.
+#
+# Columns:
+#   pattern  : Regex matched against Footprint package name OR exact Designator (if prefixed with "REF:")
+#   rotation : Degrees added to KiCad rotation (counter-clockwise)
+#   offset_x : Optional X offset in mm (footprint local frame, default 0)
+#   offset_y : Optional Y offset in mm (footprint local frame, default 0)
+#   comment  : Human note
+#
+# Project-local entries in this file take precedence over the upstream JLCPCB table.
+# Always verify final component orientation in JLCPCB's 3D SMT assembly preview!
+pattern,rotation,offset_x,offset_y,comment
+^D_SOD-123,180,0,0,KiCad SOD-123 cathode vs JLCPCB orientation
+^LED_0603_1608Metric,180,0,0,KiCad 0603 LED cathode vs JLCPCB orientation
+^SOT-23($|_),180,0,0,Standard KiCad SOT-23 rotation
+^SOT-23-5,180,0,0,Standard KiCad SOT-23-5 rotation
+^SOT-23-6,180,0,0,Standard KiCad SOT-23-6 rotation
+^SOIC-,270,0,0,Standard SOIC pin 1 orientation
+^TSSOP-,270,0,0,Standard TSSOP pin 1 orientation
+^QFN-,270,0,0,Standard QFN pin 1 orientation
+^USB-C-SMD_G-SWITCH_GT-USB-7010ASV,0,0,0,EasyEDA native footprint (verify in JLC 3D preview)
+^BULETM-SMD_ESPRESSIF_ESP32-C3-WROOM-02-N4-4MB,0,0,0,EasyEDA native footprint (verify in JLC 3D preview)

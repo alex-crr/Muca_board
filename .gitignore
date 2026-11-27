@@ -14,3 +14,10 @@ _to_delete/
 gerbers/
 production/
 *_drc_violations.json
+
+# KiCad CI outputs
+build/
+__pycache__/
+*.py[cod]
+!ci/jlcpcb-rotations.csv
+!ci/jlcpcb-rotations-base.csv

@@ -1,0 +1,359 @@
+name: KiCad Release, Production & Docs
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Optional version label override (blank = branch/tag name)"
+        required: false
+        default: ""
+      create_release:
+        description: "Create a GitHub Release (always enabled on v* tag pushes)"
+        type: boolean
+        default: false
+      publish_pages:
+        description: "Publish versioned docs & Interactive BOM to GitHub Pages"
+        type: boolean
+        default: true
+      update_latest:
+        description: "Also point /latest/ to this build (always enabled on v* tag pushes)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: kicad-pages-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    name: Build Production, Priced BOM, iBOM & Docs
+    runs-on: ubuntu-latest
+    container:
+      image: kicad/kicad:10.0.8-full
+      options: --user 0:0
+
+    outputs:
+      project_name: ${{ steps.meta.outputs.project_name }}
+      display_name: ${{ steps.meta.outputs.display_name }}
+      version: ${{ steps.meta.outputs.version }}
+      version_id: ${{ steps.meta.outputs.version_id }}
+      ref_type: ${{ steps.meta.outputs.ref_type }}
+      commit_sha: ${{ steps.meta.outputs.commit_sha }}
+      prefix: ${{ steps.meta.outputs.prefix }}
+      should_release: ${{ steps.meta.outputs.should_release }}
+      should_publish_pages: ${{ steps.meta.outputs.should_publish_pages }}
+      should_update_latest: ${{ steps.meta.outputs.should_update_latest }}
+      storage_branch: ${{ steps.meta.outputs.storage_branch }}
+      total_errors: ${{ steps.checks.outputs.total_errors }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Python CI tools & pinned InteractiveHtmlBom
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends \
+            python3-yaml \
+            python3-pil \
+            python3-markdown \
+            python3-pip
+          IBOM_VER=$(python3 -c "import yaml; print(yaml.safe_load(open('ci/config.yml'))['kicad'].get('ibom_version', '2.12.0'))")
+          pip3 install --break-system-packages --no-cache-dir "InteractiveHtmlBom==${IBOM_VER}"
+
+      - name: Resolve project & version metadata from ci/config.yml
+        id: meta
+        run: |
+          PROJECT_NAME=$(python3 -c "import yaml; print(yaml.safe_load(open('ci/config.yml'))['project']['name'])")
+          DISPLAY_NAME=$(python3 -c "import yaml; print(yaml.safe_load(open('ci/config.yml'))['project'].get('display_name', yaml.safe_load(open('ci/config.yml'))['project']['name']))")
+          PCB_FILE=$(python3 -c "import yaml; print(yaml.safe_load(open('ci/config.yml'))['project']['pcb'])")
+          STORAGE_BRANCH=$(python3 -c "import yaml; print(yaml.safe_load(open('ci/config.yml')).get('pages', {}).get('storage_branch', 'gh-pages'))")
+          DEFAULT_BRANCH=$(python3 -c "import yaml; print(yaml.safe_load(open('ci/config.yml')).get('pages', {}).get('default_branch', 'main'))")
+          SHORT_SHA=$(printf '%s' "$GITHUB_SHA" | cut -c1-7)
+
+          case "${GITHUB_REF}" in
+            refs/tags/*)
+              VER="${GITHUB_REF_NAME}"
+              VER_ID="${GITHUB_REF_NAME}"
+              REF_TYPE="tag"
+              SHOULD_REL="true"
+              SHOULD_PAGES="true"
+              UPDATE_LATEST="true"
+              ;;
+            *)
+              BRANCH_NAME="${GITHUB_REF_NAME}"
+              CUSTOM_VER="${{ inputs.version }}"
+              if [ -n "$CUSTOM_VER" ]; then
+                VER="$CUSTOM_VER"
+              else
+                VER="$BRANCH_NAME"
+              fi
+              if [ "$BRANCH_NAME" = "$DEFAULT_BRANCH" ] && [ -z "$CUSTOM_VER" ]; then
+                VER_ID="$DEFAULT_BRANCH"
+              else
+                SLUG=$(printf '%s' "$VER" | tr '/ ' '--' | tr -cd 'A-Za-z0-9._-')
+                VER_ID="branches/${SLUG}"
+              fi
+              REF_TYPE="branch"
+              SHOULD_REL="${{ inputs.create_release }}"
+              SHOULD_PAGES="${{ inputs.publish_pages }}"
+              UPDATE_LATEST="${{ inputs.update_latest }}"
+              ;;
+          esac
+
+          echo "project_name=${PROJECT_NAME}" >> "$GITHUB_OUTPUT"
+          echo "display_name=${DISPLAY_NAME}" >> "$GITHUB_OUTPUT"
+          echo "pcb_file=${PCB_FILE}" >> "$GITHUB_OUTPUT"
+          echo "storage_branch=${STORAGE_BRANCH}" >> "$GITHUB_OUTPUT"
+          echo "version=${VER}" >> "$GITHUB_OUTPUT"
+          echo "version_id=${VER_ID}" >> "$GITHUB_OUTPUT"
+          echo "ref_type=${REF_TYPE}" >> "$GITHUB_OUTPUT"
+          echo "commit_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "prefix=${PROJECT_NAME}-${VER}" >> "$GITHUB_OUTPUT"
+          echo "should_release=${SHOULD_REL}" >> "$GITHUB_OUTPUT"
+          echo "should_publish_pages=${SHOULD_PAGES}" >> "$GITHUB_OUTPUT"
+          echo "should_update_latest=${UPDATE_LATEST}" >> "$GITHUB_OUTPUT"
+          echo "Building ${PROJECT_NAME} version=${VER} (version_id=${VER_ID}, sha=${SHORT_SHA})"
+
+      - name: Restore cached BOM pricing fallback (if available)
+        uses: actions/cache@v4
+        with:
+          path: build/bom-cache
+          key: bom-pricing-${{ steps.meta.outputs.project_name }}-${{ hashFiles('*.kicad_sch', '*.kicad_pcb') }}
+          restore-keys: |
+            bom-pricing-${{ steps.meta.outputs.project_name }}-
+
+      - name: Run Full ERC & DRC Checks (non-blocking, highly visible)
+        id: checks
+        run: |
+          python3 ci/scripts/parse_checks.py --out-dir build/reports
+          TOTAL_ERR=$(python3 -c "import json; d=json.load(open('build/reports/checks-summary.json')); print(d['erc']['errors'] + d['drc']['errors'])")
+          echo "total_errors=${TOTAL_ERR}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate JLCPCB PCBA Files & Hardware Sanity Checks
+        run: |
+          python3 ci/scripts/build_jlcpcb.py \
+            --out-dir build/jlcpcb \
+            --version "${{ steps.meta.outputs.version }}"
+          python3 ci/scripts/sanity_checks.py \
+            --bom-json build/jlcpcb/bom-merged.json \
+            --cpl-csv "build/jlcpcb/${{ steps.meta.outputs.prefix }}-jlcpcb-cpl.csv" \
+            --out-dir build/reports
+
+      - name: Fetch Live JLC/LCSC Pricing, Thumbnails & Generate iBOM (parallel)
+        run: |
+          mkdir -p build/ibom build/bom build/bom-cache
+          if [ -d build/bom-cache/part-images ]; then
+            cp -r build/bom-cache/part-images build/bom/part-images
+          fi
+          CACHE_ARG=""
+          if [ -f build/bom-cache/bom-priced.json ]; then
+            CACHE_ARG="--cache-json build/bom-cache/bom-priced.json"
+          fi
+
+          python3 ci/scripts/jlc_bom_pricing.py \
+            --bom-json build/jlcpcb/bom-merged.json \
+            --out-dir build/bom \
+            --version "${{ steps.meta.outputs.version }}" \
+            ${CACHE_ARG} &
+          PID_BOM=$!
+
+          INTERACTIVE_HTML_BOM_NO_DISPLAY=1 generate_interactive_bom \
+            --no-browser \
+            --dark-mode \
+            --extra-fields "Mouser Part Number,Manufacturer_Name,Manufacturer_Part_Number" \
+            --dest-dir build/ibom \
+            --name-format "ibom" \
+            "$PWD/${{ steps.meta.outputs.pcb_file }}" &
+          PID_IBOM=$!
+
+          wait "$PID_BOM"
+          wait "$PID_IBOM"
+
+          # Refresh fallback cache for future builds
+          cp build/bom/bom-priced.json build/bom-cache/bom-priced.json
+          if [ -d build/bom/part-images ]; then
+            rm -rf build/bom-cache/part-images
+            cp -r build/bom/part-images build/bom-cache/part-images
+          fi
+
+      - name: Export Schematic PDF, 2D/3D Renders, STEP & Compile Docs Site
+        run: |
+          python3 ci/scripts/build_docs.py \
+            --out-dir build/docs \
+            --version "${{ steps.meta.outputs.version }}" \
+            --version-id "${{ steps.meta.outputs.version_id }}" \
+            --commit-sha "${{ steps.meta.outputs.commit_sha }}" \
+            --jlcpcb-dir build/jlcpcb \
+            --ibom build/ibom/ibom.html \
+            --bom-json build/bom/bom-priced.json \
+            --part-images-dir build/bom/part-images \
+            --bom-csv "build/bom/${{ steps.meta.outputs.prefix }}-bom-priced.csv" \
+            --checks-md build/reports/checks-summary.md \
+            --checks-json build/reports/checks-summary.json \
+            --sanity-md build/reports/sanity-summary.md
+
+      - name: Package Release Assets & Release Notes
+        run: |
+          mkdir -p build/release-assets
+          PREFIX="${{ steps.meta.outputs.prefix }}"
+
+          cp "build/jlcpcb/${PREFIX}-jlcpcb-production.zip" build/release-assets/
+          cp "build/jlcpcb/${PREFIX}-jlcpcb-gerbers.zip" build/release-assets/
+          cp "build/jlcpcb/${PREFIX}-jlcpcb-bom.csv" build/release-assets/
+          cp "build/jlcpcb/${PREFIX}-jlcpcb-cpl.csv" build/release-assets/
+          cp "build/bom/${PREFIX}-bom-priced.csv" build/release-assets/
+          cp build/ibom/ibom.html "build/release-assets/${PREFIX}-ibom.html"
+          cp "build/docs/${PREFIX}-schematic.pdf" build/release-assets/
+          cp "build/docs/${PREFIX}-renders.zip" build/release-assets/
+          if [ -f "build/docs/${PREFIX}-3d.step" ]; then
+            cp "build/docs/${PREFIX}-3d.step" build/release-assets/
+          fi
+
+          python3 -c "import zipfile, pathlib; zf = zipfile.ZipFile('build/release-assets/${PREFIX}-reports.zip', 'w', zipfile.ZIP_DEFLATED); [zf.write(p, arcname=p.name) for p in sorted(pathlib.Path('build/reports').iterdir()) if p.is_file()]; zf.close()"
+
+          OWNER=$(printf '%s' "$GITHUB_REPOSITORY" | cut -d/ -f1 | tr '[:upper:]' '[:lower:]')
+          REPO=$(printf '%s' "$GITHUB_REPOSITORY" | cut -d/ -f2)
+          PAGES_URL="https://${OWNER}.github.io/${REPO}/${{ steps.meta.outputs.version_id }}"
+
+          python3 ci/scripts/build_release_notes.py \
+            --version "${{ steps.meta.outputs.version }}" \
+            --checks-json build/reports/checks-summary.json \
+            --bom-json build/bom/bom-priced.json \
+            --pages-url "${PAGES_URL}" \
+            --out build/release-notes.md
+
+          chmod -R a+rX build/docs/site build/release-assets
+
+      - name: Upload Release Bundle Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-bundle-${{ steps.meta.outputs.version }}
+          path: |
+            build/release-assets/
+            build/release-notes.md
+            build/bom/bom-priced.json
+          retention-days: 30
+
+      - name: Upload Built Versioned Site Artifact
+        if: steps.meta.outputs.should_publish_pages == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-site-${{ steps.meta.outputs.commit_sha }}
+          path: build/docs/site
+          retention-days: 1
+
+  deploy-pages:
+    name: Update Versioned Pages & Deploy
+    needs: build
+    if: needs.build.outputs.should_publish_pages == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout repo scripts
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          path: repo
+
+      - name: Download newly built site
+        uses: actions/download-artifact@v4
+        with:
+          name: built-site-${{ needs.build.outputs.commit_sha }}
+          path: built-site
+
+      - name: Merge into persistent versioned gh-pages branch
+        env:
+          STORAGE_BRANCH: ${{ needs.build.outputs.storage_branch }}
+        run: |
+          mkdir -p pages-store
+          cd pages-store
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+
+          if git ls-remote --exit-code --heads origin "${STORAGE_BRANCH}" >/dev/null 2>&1; then
+            git fetch --depth=1 origin "${STORAGE_BRANCH}"
+            git checkout -q -B "${STORAGE_BRANCH}" "origin/${STORAGE_BRANCH}"
+          else
+            git checkout -q --orphan "${STORAGE_BRANCH}"
+          fi
+          cd ..
+
+          UPDATE_LATEST_FLAG=""
+          if [ "${{ needs.build.outputs.should_update_latest }}" = "true" ]; then
+            UPDATE_LATEST_FLAG="--update-latest"
+          fi
+
+          python3 repo/ci/scripts/pages_manager.py publish \
+            --pages-root pages-store \
+            --site-dir built-site \
+            --version-id "${{ needs.build.outputs.version_id }}" \
+            --label "${{ needs.build.outputs.version }}" \
+            --ref-type "${{ needs.build.outputs.ref_type }}" \
+            --sha "${{ needs.build.outputs.commit_sha }}" \
+            ${UPDATE_LATEST_FLAG}
+
+          cd pages-store
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -q -m "Publish docs: ${{ needs.build.outputs.version_id }} (${{ needs.build.outputs.commit_sha }})"
+            git push origin "${STORAGE_BRANCH}"
+          fi
+          cd ..
+          rm -rf pages-store/.git
+
+      - name: Upload GitHub Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages-store
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  github-release:
+    name: Create GitHub Release
+    needs: build
+    if: needs.build.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download release bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: release-bundle-${{ needs.build.outputs.version }}
+          path: release-bundle
+
+      - name: Create or Update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.build.outputs.version }}
+          DISPLAY: ${{ needs.build.outputs.display_name }}
+          TOTAL_ERRORS: ${{ needs.build.outputs.total_errors }}
+        run: |
+          TITLE="${DISPLAY} ${TAG}"
+          if [ "${TOTAL_ERRORS:-0}" -gt 0 ]; then
+            TITLE="${DISPLAY} ${TAG} — ⚠️ ${TOTAL_ERRORS} ERC/DRC Error(s)"
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "$TITLE" --notes-file release-bundle/release-notes.md
+            gh release upload "$TAG" release-bundle/release-assets/* --clobber
+          else
+            gh release create "$TAG" \
+              release-bundle/release-assets/* \
+              --title "$TITLE" \
+              --notes-file release-bundle/release-notes.md
+          fi

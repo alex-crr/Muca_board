@@ -1,0 +1,85 @@
+# Central KiCad 10 CI/CD configuration
+# To port this pipeline to another KiCad 10 repository, edit the `project:` and `docs:` blocks below.
+project:
+  name: "muca2"
+  display_name: "MUCA2"
+  board_name: "MUCA2"
+  schematic: "MUCA2.kicad_sch"
+  pcb: "MUCA2.kicad_pcb"
+  pro: "MUCA2.kicad_pro"
+
+kicad:
+  # Pinned versions for deterministic, reproducible CI builds
+  fast_image: "kicad/kicad:10.0.8"
+  full_image: "kicad/kicad:10.0.8-full"
+  ibom_version: "2.12.0"
+
+checks:
+  # Non-blocking by default: errors never stop the build, but emit prominent
+  # GitHub annotations, PR/release CAUTION banners, and red docs alerts.
+  # Set to true if you later want strict failing gates.
+  fail_on_erc_errors: false
+  fail_on_drc_errors: false
+  drc_schematic_parity: true
+  drc_refill_zones: true
+
+jlcpcb:
+  # Copper + technical layers exported into Gerbers ZIP (2-layer board)
+  gerber_layers:
+    - "F.Cu"
+    - "B.Cu"
+    - "F.Paste"
+    - "B.Paste"
+    - "F.Silkscreen"
+    - "B.Silkscreen"
+    - "F.Mask"
+    - "B.Mask"
+    - "Edge.Cuts"
+  # Exclude components marked DNP in schematic/PCB
+  exclude_dnp: true
+  # Exclude through-hole footprints from CPL (set false if using JLC TH assembly)
+  cpl_smd_only: false
+  # Extended part feeder setup fee in USD per unique extended part (for BOM cost calculator)
+  extended_part_fee_usd: 3.0
+  # Project-local rotation/offset override table (highest priority)
+  rotations_file: "ci/jlcpcb-rotations.csv"
+  # Vendored base rotation table (reproducible, zero live network dependency)
+  base_rotations_file: "ci/jlcpcb-rotations-base.csv"
+
+renders:
+  width: 1600
+  height: 1200
+  quality: "raytrace_post"
+  pr_diff_width: 1200
+  pr_diff_height: 900
+  pr_diff_quality: "basic"
+  views:
+    - name: "top"
+      side: "top"
+      rotate: ""
+    - name: "bottom"
+      side: "bottom"
+      rotate: ""
+    - name: "iso-top"
+      side: "top"
+      rotate: "-35,0,25"
+    - name: "iso-bottom"
+      side: "bottom"
+      rotate: "35,0,-25"
+
+docs:
+  # Directory containing your own manual Markdown docs and images
+  manual_dir: "docs"
+  # Optional changelog file included in GitHub Releases if present
+  changelog: "docs/CHANGELOG.md"
+  # Mintlify-style brand accent hex (used across light & dark themes)
+  accent_color: "#10b981"
+  # Optional external docs link shown in the top bar (leave empty to hide)
+  external_docs_url: ""
+  external_docs_label: ""
+
+pages:
+  # Backing branch that stores versioned docs (/latest/, /v*/, /main/, /branches/*)
+  storage_branch: "gh-pages"
+  # Primary development branch name
+  default_branch: "main"
